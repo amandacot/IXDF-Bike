@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bike Home</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --page: #000;
+    --surface: #0f0f11;
+    --pill: #232327;
+    --pill-active: #303035;
+    --ink: #f2f2f4;
+    --muted: #9a9aa2;
+    --map-bg: #1b1b1e;
+    --bike-blue: #3a62c0;
+    --me: #9b8cff;
+    --ok: #4dd0a0;
+    --warn: #f2b84b;
+    --danger: #e5484d;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--page);
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+    color: var(--ink);
+    display: flex;
+    justify-content: center;
+    min-height: 100vh;
+  }
+  .phone {
+    width: 440px;
+    max-width: 100%;
+    background: var(--surface);
+    min-height: 100vh;
+    padding: 26px 16px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  /* ---------- Search (teammate) ---------- */
+  .search {
+    height: 52px;
+    background: var(--pill);
+    border-radius: 26px;
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    gap: 10px;
+  }
+  .search input {
+    flex: 1; border: none; background: transparent;
+    font-size: 18px; outline: none; color: var(--ink);
+  }
+
+  /* ---------- Top bar: search + profile ---------- */
+  .topbar { display: flex; align-items: center; gap: 10px; }
+  .topbar .search { flex: 1; min-width: 0; }
+  .round-btn {
+    flex: none; width: 52px; height: 52px; border-radius: 50%;
+    border: none; background: var(--pill); color: var(--ink);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+  }
+
+  /* ---------- Views ---------- */
+  .view { display: flex; flex-direction: column; gap: 12px; }
+  .view[hidden] { display: none; }
+
+  /* ---------- Saved locations page ---------- */
+  .page-head { display: flex; align-items: center; gap: 12px; height: 52px; }
+  .page-head h1 { font-size: 24px; font-weight: 600; }
+  .places { list-style: none; display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
+  .place {
+    width: 100%; display: flex; align-items: center; gap: 14px;
+    padding: 10px 8px; border: none; border-radius: 12px;
+    background: transparent; color: var(--ink); font: inherit; text-align: left;
+    cursor: pointer;
+  }
+  .place:active { background: var(--pill); }
+  .place .badge {
+    flex: none; width: 56px; height: 46px; border-radius: 23px;
+    background: var(--pill);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .place .badge svg { transform: scale(.8); }
+  .place .text { flex: 1; min-width: 0; }
+  .place .name { font-size: 19px; font-weight: 500; line-height: 1.2; }
+  .place .addr { font-size: 13px; color: var(--muted); margin-top: 3px; }
+  .place .chev { flex: none; color: var(--muted); }
+  .place.add .badge { background: transparent; border: 2px dashed var(--pill-active); }
+  .place.add .name { color: var(--muted); }
+
+  /* ---------- Map (teammate) ---------- */
+  .map {
+    height: 282px;
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--map-bg);
+    position: relative;
+  }
+  .map > svg { width: 100%; height: 100%; display: block; }
+
+  /* ---------- Map markers ---------- */
+  .pin {
+    position: absolute; transform: translate(-50%, -50%);
+    display: flex; flex-direction: column; align-items: center;
+  }
+  .me-dot {
+    position: relative; width: 14px; height: 14px; border-radius: 50%;
+    background: var(--me); border: 2.5px solid #fff;
+    box-shadow: 0 0 0 0 rgba(155,140,255,.6);
+    animation: pulse 2s ease-out infinite;
+    transition: background .2s, opacity .2s;
+  }
+  @keyframes pulse { to { box-shadow: 0 0 0 14px rgba(155,140,255,0); } }
+  .map.hidden-loc .me-dot { background: #6b6b72; animation: none; opacity: .7; }
+  @media (prefers-reduced-motion: reduce) { .me-dot { animation: none; } }
+
+  .friend {
+    border: none; background: none; padding: 0; color: var(--ink); font: inherit; cursor: pointer;
+  }
+  .friend .bubble {
+    background: #fff; color: #111;
+    font-size: 11px; font-weight: 600; white-space: nowrap;
+    padding: 3px 8px; border-radius: 10px;
+    margin-bottom: 4px; position: relative;
+    box-shadow: 0 2px 6px rgba(0,0,0,.4);
+  }
+  .friend .bubble::after {
+    content: ""; position: absolute; left: 50%; bottom: -4px; transform: translateX(-50%);
+    border: 4px solid transparent; border-bottom: 0; border-top-color: #fff;
+  }
+  .friend .more { display: none; font-weight: 400; color: #555; }
+  .friend.open .more { display: inline; }
+  .friend.open { z-index: 2; }
+  .friend .avatar {
+    width: 26px; height: 26px; border-radius: 50%;
+    border: 2px solid #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; color: #111;
+  }
+
+  /* ---------- Location sharing bar ---------- */
+  .share-bar {
+    position: absolute; left: 8px; right: 8px; bottom: 8px; z-index: 3;
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 10px 8px 12px;
+    background: rgba(20,20,23,.88);
+    -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+    border-radius: 14px;
+  }
+  .share-bar .status-dot { flex: none; width: 9px; height: 9px; border-radius: 50%; background: #4dd0a0; }
+  .map.hidden-loc .share-bar .status-dot { background: #6b6b72; }
+  .share-bar .label { flex: 1; min-width: 0; font-size: 14px; font-weight: 500; line-height: 1.2; }
+  .share-bar .sub { display: block; font-size: 12px; font-weight: 400; color: var(--muted); }
+  .switch {
+    flex: none; width: 46px; height: 28px; border-radius: 14px;
+    border: none; padding: 0; cursor: pointer;
+    background: #4dd0a0; position: relative; transition: background .2s;
+  }
+  .switch::after {
+    content: ""; position: absolute; top: 3px; left: 21px;
+    width: 22px; height: 22px; border-radius: 50%; background: #fff;
+    transition: left .2s;
+  }
+  .switch[aria-checked="false"] { background: var(--pill-active); }
+  .switch[aria-checked="false"]::after { left: 3px; }
+
+  /* ---------- Saved routes (replaces battery rows) ---------- */
+  .routes { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+  .route {
+    display: flex; align-items: center; gap: 16px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: none; background: transparent;
+    text-align: left; cursor: pointer; width: 100%;
+    font: inherit; color: inherit;
+  }
+  .route.selected { background: var(--pill); }
+  .route .icon { flex: none; width: 58px; display: flex; justify-content: center; }
+  .route .name { font-size: 21px; font-weight: 500; line-height: 1.2; }
+  .route .battery { font-size: 13px; color: var(--muted); margin-top: 3px; }
+
+  .confirm {
+    align-self: center;
+    width: 194px; height: 34px;
+    border: none; border-radius: 10px;
+    background: var(--pill);
+    font: inherit; font-size: 18px; color: var(--ink);
+    cursor: pointer;
+  }
+
+  /* ---------- 3D bike model (mine) ---------- */
+  .bike-area {
+    display: flex; align-items: center; gap: 8px;
+    height: 230px;
+  }
+  .bike-stage {
+    flex: 1; min-width: 0; height: 100%;
+    position: relative;
+    touch-action: pan-y;          /* vertical swipes scroll the page, horizontal swipes turn the bike */
+    -webkit-user-select: none; user-select: none;
+  }
+  .bike-stage canvas { display: block; width: 100% !important; height: 100% !important; }
+  .bike-fallback { display: none; width: 100%; margin-top: 30px; }
+  .no-webgl .bike-fallback { display: block; }
+
+  /* ---------- Bike stats column ---------- */
+  .bike-stats {
+    flex: none; width: 118px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .stat { padding-left: 4px; }
+  .stat dt { font-size: 12px; color: var(--muted); line-height: 1.2; letter-spacing: .02em; }
+  .stat dd {
+    display: flex; align-items: center; gap: 7px;
+    font-size: 21px; font-weight: 600; line-height: 1.2; margin-top: 2px;
+  }
+  .stat dd svg { flex: none; display: block; }
+  #powerStat.on dd svg { color: var(--ok); }
+  #powerStat:not(.on) dd { color: var(--muted); }
+  #lockStat.unlocked dd svg { color: var(--warn); }
+  .stat .unit { font-size: 14px; font-weight: 500; margin-left: -4px; }
+
+  /* ---------- Bottom nav ---------- */
+  .controls {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    justify-items: center;
+    margin-top: auto;
+    padding-top: 8px;
+  }
+  .nav-btn {
+    border: none; background: none; padding: 0; font: inherit; color: var(--ink);
+    display: flex; flex-direction: column; align-items: center; gap: 5px;
+    cursor: pointer;
+  }
+  .nav-btn .circle {
+    width: 58px; height: 58px; border-radius: 50%;
+    background: var(--pill);
+    display: flex; align-items: center; justify-content: center;
+    transition: background .2s, color .2s, box-shadow .2s;
+  }
+  .nav-btn .cap { font-size: 12px; color: var(--muted); line-height: 1; }
+  .nav-btn:active .circle, .round-btn:active { background: var(--pill-active); }
+  .nav-btn[aria-current="page"] .circle { background: var(--ink); color: var(--surface); }
+  .nav-btn[aria-current="page"] .cap { color: var(--ink); }
+
+  /* Power: green when on, dim when off */
+  #powerBtn[aria-pressed="true"] .circle { color: var(--ok); box-shadow: inset 0 0 0 2px var(--ok); }
+  #powerBtn[aria-pressed="true"] .cap { color: var(--ok); }
+  #powerBtn[aria-pressed="false"] .circle { color: #6b6b72; }
+
+  /* Lock: amber + open shackle when unlocked */
+  #lockBtn[aria-pressed="false"] .circle { color: var(--warn); box-shadow: inset 0 0 0 2px var(--warn); }
+  #lockBtn[aria-pressed="false"] .cap { color: var(--warn); }
+
+  /* SOS */
+  #sosBtn .circle { background: var(--danger); color: #fff; font-size: 16px; font-weight: 800; letter-spacing: .04em; }
+  #sosBtn .cap { color: var(--danger); }
+  #sosBtn.active .circle { animation: sos-pulse 1.2s ease-out infinite; }
+  @keyframes sos-pulse { 0% { box-shadow: 0 0 0 0 rgba(229,72,77,.7); } 100% { box-shadow: 0 0 0 14px rgba(229,72,77,0); } }
+
+  /* ---------- Toast (demo notifications) ---------- */
+  .toast {
+    position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 40;
+    width: calc(min(440px, 100%) - 32px);
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 14px;
+    background: #2a2a2f; color: var(--ink);
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.5);
+    font-size: 15px; line-height: 1.3;
+    animation: drop .25s ease-out;
+  }
+  .toast[hidden] { display: none; }
+  .toast .ico {
+    flex: none; width: 34px; height: 34px; border-radius: 50%;
+    background: var(--ok); color: #111;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .toast small { display: block; color: var(--muted); font-size: 12px; }
+  @keyframes drop { from { transform: translate(-50%, -20px); opacity: 0; } }
+
+  /* ---------- SOS sheet ---------- */
+  .sheet-backdrop {
+    position: fixed; inset: 0; z-index: 20;
+    background: rgba(0,0,0,.6);
+    display: flex; align-items: flex-end; justify-content: center;
+  }
+  .sheet-backdrop[hidden] { display: none; }
+  .sheet {
+    width: 440px; max-width: 100%;
+    background: #18181b;
+    border-radius: 22px 22px 0 0;
+    padding: 10px 20px 28px;
+    animation: rise .25s ease-out;
+  }
+  @keyframes rise { from { transform: translateY(40px); opacity: 0; } }
+  .sheet .grip { width: 40px; height: 5px; border-radius: 3px; background: var(--pill-active); margin: 0 auto 16px; }
+  .sheet h2 { font-size: 24px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+  .sheet h2 .live { width: 10px; height: 10px; border-radius: 50%; background: var(--danger); animation: sos-pulse 1.2s ease-out infinite; }
+  .sheet p { font-size: 15px; color: var(--muted); margin-top: 6px; line-height: 1.4; }
+  .sheet ul { list-style: none; margin: 18px 0 22px; display: flex; flex-direction: column; gap: 12px; }
+  .sheet li { display: flex; align-items: center; gap: 12px; font-size: 16px; }
+  .sheet li svg { flex: none; color: var(--danger); }
+  .sheet .btn {
+    width: 100%; height: 52px; border: none; border-radius: 14px;
+    font: inherit; font-size: 17px; font-weight: 600; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; text-decoration: none;
+  }
+  .sheet .btn + .btn { margin-top: 10px; }
+  .btn-danger { background: var(--danger); color: #fff; }
+  .btn-plain { background: var(--pill); color: var(--ink); }
+</style>
+</head>
+<body>
+<main class="phone">
+
+  <section class="view" id="homeView">
+
+  <!-- Search bar + profile -->
+  <div class="topbar">
+    <label class="search">
+      <svg width="38" height="38" viewBox="0 0 38 38" fill="none" stroke="currentColor" stroke-width="2.2">
+        <circle cx="14" cy="14" r="10"/>
+        <path d="M8 12 a6 6 0 0 1 6-5" stroke-width="1.5"/>
+        <path d="M21.5 21.5 L33 33" stroke-width="4" stroke-linecap="round"/>
+      </svg>
+      <input type="text" aria-label="Search">
+    </label>
+    <button class="round-btn" aria-label="Profile">
+      <svg width="30" height="30" viewBox="0 0 30 30" fill="none" stroke="currentColor" stroke-width="2.2">
+        <circle cx="15" cy="10" r="6"/>
+        <path d="M3.5 28 c0-7 5-11 11.5-11 s11.5 4 11.5 11" stroke-linecap="round"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- GPS map placeholder -->
+  <div class="map" id="map" aria-label="Map">
+    <svg viewBox="0 0 408 282" preserveAspectRatio="xMidYMid slice">
+      <g stroke="#333338" stroke-width="1" fill="none">
+        <path d="M0 40 L408 20"/><path d="M0 90 L408 70"/><path d="M0 150 L408 120"/><path d="M0 210 L408 190"/><path d="M0 260 L408 245"/>
+        <path d="M60 0 L90 282"/><path d="M140 0 L170 282"/><path d="M220 0 L240 282"/><path d="M300 0 L320 282"/><path d="M370 0 L390 282"/>
+        <path d="M120 120 L260 60 L408 40"/><path d="M0 200 L130 160 L250 230 L408 210"/>
+      </g>
+      <g stroke="#4a4a4a" stroke-width="2.5" fill="none">
+        <path d="M150 0 L260 110 L408 170"/><path d="M0 120 L200 150 L300 282"/>
+      </g>
+      <path d="M0 160 C60 150 90 110 150 95 C200 85 240 40 300 0" stroke="#0a0a0b" stroke-width="16" fill="none"/>
+      <path d="M0 200 C50 195 70 250 140 260 C200 268 260 250 330 282" stroke="#0a0a0b" stroke-width="12" fill="none"/>
+      <text x="40" y="212" fill="#9a9a9a" font-size="9" font-family="sans-serif">Pittsburgh</text>
+    </svg>
+
+    <!-- Friends (tap a friend for details) -->
+    <button class="pin friend" style="left:28%; top:27%" aria-label="Jess, 0.8 miles away">
+      <span class="bubble">Jess<span class="more"> · 0.8 mi · 2m ago</span></span>
+      <span class="avatar" style="background:#ff9a76">J</span>
+    </button>
+    <button class="pin friend" style="left:57%; top:47%" aria-label="Sam, 0.4 miles away">
+      <span class="bubble">Sam<span class="more"> · 0.4 mi · riding</span></span>
+      <span class="avatar" style="background:#f2c94c">S</span>
+    </button>
+    <button class="pin friend" style="left:13%; top:56%" aria-label="Marcus, 1.6 miles away">
+      <span class="bubble">Marcus<span class="more"> · 1.6 mi · 12m ago</span></span>
+      <span class="avatar" style="background:#7fd1ff">M</span>
+    </button>
+
+    <!-- You -->
+    <div class="pin" style="left:82%; top:54%" aria-hidden="true"><span class="me-dot"></span></div>
+
+    <!-- Location sharing on/off -->
+    <div class="share-bar">
+      <span class="status-dot"></span>
+      <span class="label" id="shareLabel">Sharing location<span class="sub" id="shareSub">Visible to 3 friends</span></span>
+      <button class="switch" id="shareSwitch" role="switch" aria-checked="true" aria-label="Share my location"></button>
+    </div>
+  </div>
+
+  <!-- Saved routes (each shows est. battery) -->
+  <section class="routes" aria-label="Saved routes">
+    <button class="route selected">
+      <span class="icon">
+        <svg width="40" height="44" viewBox="0 0 40 44" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round">
+          <path d="M20 3 L36 9 V21 C36 31 29 38 20 41 C11 38 4 31 4 21 V9 Z"/>
+          <path d="M13 22 L18 27 L28 16" stroke-linecap="round"/>
+        </svg>
+      </span>
+      <span>
+        <div class="name">Safest Route</div>
+        <div class="battery">Est. battery remaining: 74%</div>
+      </span>
+    </button>
+    <button class="route">
+      <span class="icon">
+        <svg width="40" height="44" viewBox="0 0 40 44" fill="currentColor">
+          <path d="M23 2 L6 25 H18 L15 42 L34 17 H22 Z"/>
+        </svg>
+      </span>
+      <span>
+        <div class="name">Fastest Route</div>
+        <div class="battery">Est. battery remaining: 68%</div>
+      </span>
+    </button>
+    <button class="route">
+      <span class="icon">
+        <svg width="40" height="44" viewBox="0 0 40 44" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 4 a11 11 0 0 0-6.5 19.9 C15 25 15.5 27 15.5 29 H24.5 C24.5 27 25 25 26.5 23.9 A11 11 0 0 0 20 4 Z"/>
+          <path d="M16 34 H24 M17.5 39 H22.5"/>
+          <path d="M20 12 a5 5 0 0 0-5 5" stroke-width="1.6"/>
+        </svg>
+      </span>
+      <span>
+        <div class="name">Best Lit Route</div>
+        <div class="battery">Est. battery remaining: 71%</div>
+      </span>
+    </button>
+  </section>
+
+  <button class="confirm">Confirm</button>
+
+  <!-- Bike stats + 3D bike model (swipe to rotate) -->
+  <div class="bike-area">
+    <dl class="bike-stats" aria-label="Bike status">
+      <div class="stat">
+        <dt>Battery</dt>
+        <dd>
+          82%
+          <svg width="26" height="14" viewBox="0 0 34 18" fill="none" aria-hidden="true">
+            <rect x="1" y="1" width="28" height="16" rx="3.5" stroke="currentColor" stroke-width="2"/>
+            <rect x="30.5" y="5.5" width="2.5" height="7" rx="1" fill="currentColor"/>
+            <rect x="3.5" y="3.5" width="19" height="11" rx="1.5" fill="currentColor"/>
+          </svg>
+        </dd>
+      </div>
+      <div class="stat">
+        <dt>Miles left</dt>
+        <dd>31<span class="unit">mi</span></dd>
+      </div>
+      <div class="stat" id="powerStat">
+        <dt>Power</dt>
+        <dd>
+          <span id="powerText">On</span>
+          <svg width="15" height="15" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" aria-hidden="true">
+            <path d="M12 9 A14 14 0 1 0 28 9"/><path d="M20 3 V19"/>
+          </svg>
+        </dd>
+      </div>
+      <div class="stat" id="lockStat">
+        <dt>Lock</dt>
+        <dd id="lockStatus">
+          <span id="lockText">Locked</span>
+          <svg width="14" height="17" viewBox="0 0 34 40" fill="none" stroke="currentColor" stroke-width="4" aria-hidden="true">
+            <rect x="3" y="17" width="28" height="21" rx="3"/>
+            <path class="shackle" d="M8 17 V11 a9 9 0 0 1 18 0 V17"/>
+          </svg>
+        </dd>
+      </div>
+    </dl>
+
+  <div class="bike-stage" id="bikeStage" aria-label="3D model of your bike. Swipe left or right to rotate.">
+    <!-- Fallback if WebGL / three.js can't load -->
+    <svg class="bike-fallback" viewBox="0 0 340 210" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <!-- wheels -->
+      <g stroke="#d0d0d0">
+        <circle cx="70" cy="140" r="58" stroke-width="12"/>
+        <circle cx="270" cy="140" r="58" stroke-width="12"/>
+      </g>
+      <g stroke="#666" stroke-width="1">
+        <path d="M70 86 V194 M16 140 H124 M32 102 L108 178 M108 102 L32 178"/>
+        <path d="M270 86 V194 M216 140 H324 M232 102 L308 178 M308 102 L232 178"/>
+      </g>
+      <circle cx="70" cy="140" r="7" fill="#999"/>
+      <circle cx="270" cy="140" r="9" fill="#aaa"/>
+      <!-- rear rack + fender -->
+      <path d="M40 72 H110 M50 72 L70 140" stroke="#b0b0b0" stroke-width="4"/>
+      <path d="M10 130 A62 62 0 0 1 120 100" stroke="#b0b0b0" stroke-width="5"/>
+      <!-- frame (step-through) -->
+      <path d="M70 140 L150 150 L120 75" stroke="var(--bike-blue)" stroke-width="10"/>
+      <path d="M150 150 C175 110 205 80 232 50" stroke="var(--bike-blue)" stroke-width="16"/>
+      <path d="M232 50 L270 140" stroke="#b0b0b0" stroke-width="7"/>
+      <!-- seat + bars -->
+      <path d="M120 75 L115 52" stroke="#b0b0b0" stroke-width="5"/>
+      <path d="M95 50 H138" stroke="#d0d0d0" stroke-width="9"/>
+      <path d="M232 50 L240 22 L262 18" stroke="#b0b0b0" stroke-width="5"/>
+      <!-- motor + crank -->
+      <circle cx="150" cy="150" r="13" fill="#b0b0b0"/>
+      <path d="M150 150 L165 170" stroke="#999" stroke-width="4"/>
+      <text x="196" y="96" fill="#cfd6ea" font-size="9" font-family="sans-serif" transform="rotate(-48 196 96)" letter-spacing="2">E-BIKE</text>
+    </svg>
+  </div>
+  </div>
+
+  </section>
+
+  <!-- Saved locations page -->
+  <section class="view" id="savedView" hidden>
+    <div class="page-head">
+      <button class="round-btn" id="backBtn" aria-label="Back">
+        <svg width="14" height="22" viewBox="0 0 14 22" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M11 2 L3 11 L11 20"/></svg>
+      </button>
+      <h1>Saved Locations</h1>
+    </div>
+    <ul class="places">
+      <li><button class="place" data-place="Home">
+        <span class="badge"><svg width="46" height="38" viewBox="0 0 46 38" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round">
+        <path d="M3 19 L23 2 L43 19"/><path d="M8 15 V36 H38 V15"/><path d="M18 36 V24 H28 V36"/>
+      </svg></span>
+        <span class="text"><div class="name">Home</div><div class="addr">412 Maple St</div></span>
+        <svg class="chev" width="10" height="16" viewBox="0 0 10 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 2 L8 8 L2 14"/></svg>
+      </button></li>
+      <li><button class="place" data-place="Social">
+        <span class="badge"><svg width="50" height="36" viewBox="0 0 50 36" fill="currentColor">
+        <circle cx="25" cy="8" r="7"/><path d="M13 34 c0-10 5-15 12-15 s12 5 12 15z"/>
+        <circle cx="10" cy="12" r="5.5"/><path d="M0 32 c0-8 4-12 10-12 c2 0 3.5 .5 5 1.5 c-3 3-4 6-4.5 10.5z"/>
+        <circle cx="40" cy="12" r="5.5"/><path d="M50 32 c0-8-4-12-10-12 c-2 0-3.5 .5-5 1.5 c3 3 4 6 4.5 10.5z"/>
+      </svg></span>
+        <span class="text"><div class="name">Social</div><div class="addr">Jess's place · 2.1 mi</div></span>
+        <svg class="chev" width="10" height="16" viewBox="0 0 10 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 2 L8 8 L2 14"/></svg>
+      </button></li>
+      <li><button class="place" data-place="Work">
+        <span class="badge"><svg width="46" height="36" viewBox="0 0 46 36" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="2" y="8" width="42" height="26" rx="3"/><path d="M16 8 V4 a2 2 0 0 1 2-2 h10 a2 2 0 0 1 2 2 V8"/>
+        <path d="M2 18 H44"/><rect x="20" y="15" width="6" height="6" rx="1"/>
+      </svg></span>
+        <span class="text"><div class="name">Work</div><div class="addr">5000 Forbes Ave</div></span>
+        <svg class="chev" width="10" height="16" viewBox="0 0 10 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 2 L8 8 L2 14"/></svg>
+      </button></li>
+      <li><button class="place" data-place="Bar">
+        <span class="badge"><svg width="34" height="38" viewBox="0 0 34 38" fill="currentColor">
+        <path d="M2 2 H32 L19 18 V33 H27 V37 H7 V33 H15 V18 Z"/>
+      </svg></span>
+        <span class="text"><div class="name">Bar</div><div class="addr">The Corner Tap · 1.4 mi</div></span>
+        <svg class="chev" width="10" height="16" viewBox="0 0 10 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 2 L8 8 L2 14"/></svg>
+      </button></li>
+      <li><button class="place add">
+        <span class="badge">
+          <svg width="22" height="22" viewBox="0 0 22 22" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M11 3 V19 M3 11 H19"/></svg>
+        </span>
+        <span class="text"><div class="name">Add a place</div></span>
+      </button></li>
+    </ul>
+  </section>
+
+  <!-- Bottom nav -->
+  <nav class="controls">
+    <button class="nav-btn" id="homeBtn">
+      <span class="circle">
+        <svg width="34" height="30" viewBox="0 0 46 38" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round">
+          <path d="M3 19 L23 2 L43 19"/><path d="M8 15 V36 H38 V15"/><path d="M18 36 V24 H28 V36"/>
+        </svg>
+      </span>
+      <span class="cap">Home</span>
+    </button>
+    <button class="nav-btn" id="savedBtn">
+      <span class="circle">
+        <svg width="32" height="29" viewBox="0 0 38 34" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linejoin="round">
+          <path d="M19 31 C8 23 2 17 2 10.5 A8.5 8.5 0 0 1 19 7 A8.5 8.5 0 0 1 36 10.5 C36 17 30 23 19 31 Z"/>
+        </svg>
+      </span>
+      <span class="cap">Saved</span>
+    </button>
+    <button class="nav-btn" id="powerBtn" aria-pressed="true" aria-label="Bike power">
+      <span class="circle">
+        <svg width="32" height="32" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round">
+          <path d="M12 9 A14 14 0 1 0 28 9"/><path d="M20 3 V19"/>
+        </svg>
+      </span>
+      <span class="cap" id="powerCap">On</span>
+    </button>
+    <button class="nav-btn" id="lockBtn" aria-pressed="true" aria-label="Bike lock">
+      <span class="circle">
+        <svg width="28" height="33" viewBox="0 0 34 40" fill="none" stroke="currentColor" stroke-width="2.6">
+          <rect x="3" y="17" width="28" height="21" rx="3"/>
+          <path class="shackle" d="M8 17 V11 a9 9 0 0 1 18 0 V17"/>
+          <path d="M17 24 V31" stroke-width="3" stroke-linecap="round"/>
+        </svg>
+      </span>
+      <span class="cap" id="lockCap">Locked</span>
+    </button>
+    <button class="nav-btn" id="sosBtn" aria-label="SOS: alert if your bike is in danger">
+      <span class="circle">SOS</span>
+      <span class="cap">Alert</span>
+    </button>
+  </nav>
+
+  <!-- SOS sheet -->
+  <div class="sheet-backdrop" id="sosSheet" hidden>
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sosTitle">
+      <div class="grip"></div>
+
+      <div id="sosConfirm">
+        <h2 id="sosTitle">Bike SOS</h2>
+        <p>Away from your bike and think something's wrong? Sending an SOS will:</p>
+        <ul>
+          <li><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 L7 13.5 L15 4.5"/></svg>Sound the alarm on your bike</li>
+          <li><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 L7 13.5 L15 4.5"/></svg>Lock it and cut motor power</li>
+          <li><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 L7 13.5 L15 4.5"/></svg>Track its live location</li>
+          <li><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 L7 13.5 L15 4.5"/></svg>Alert your emergency contacts</li>
+        </ul>
+        <button class="btn btn-danger" id="sosSend">Send SOS</button>
+        <button class="btn btn-plain" data-close>Cancel</button>
+      </div>
+
+      <div id="sosActive" hidden>
+        <h2><span class="live"></span>SOS active</h2>
+        <p>Alarm is sounding and your bike is locked with the motor off. Your emergency contacts have been alerted.</p>
+        <ul>
+          <li><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 L7 13.5 L15 4.5"/></svg>Bike last seen 0.3 mi away · just now</li>
+          <li><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 L7 13.5 L15 4.5"/></svg>Live tracking on</li>
+        </ul>
+        <button class="btn btn-danger" id="call911">Call 911</button>
+        <button class="btn btn-plain" id="sosStop">Stop SOS</button>
+        <button class="btn btn-plain" data-close>Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Demo notification -->
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+</main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// Route selection
+document.querySelectorAll('.route').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.route').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+  });
+});
+
+// Simple two-page navigation (#saved = Saved Locations)
+(function () {
+  const home = document.getElementById('homeView');
+  const saved = document.getElementById('savedView');
+  const savedBtn = document.getElementById('savedBtn');
+  const homeBtn = document.getElementById('homeBtn');
+  function show() {
+    const onSaved = location.hash === '#saved';
+    home.hidden = onSaved;
+    saved.hidden = !onSaved;
+    savedBtn.removeAttribute('aria-current');
+    homeBtn.removeAttribute('aria-current');
+    (onSaved ? savedBtn : homeBtn).setAttribute('aria-current', 'page');
+    window.scrollTo(0, 0);
+  }
+  let cameFromHome = false;
+  function goHome() { if (cameFromHome) history.back(); else location.hash = ''; }
+  savedBtn.addEventListener('click', () => {
+    if (location.hash !== '#saved') { cameFromHome = true; location.hash = 'saved'; }
+  });
+  homeBtn.addEventListener('click', () => {
+    if (location.hash === '#saved') goHome(); else window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+  document.getElementById('backBtn').addEventListener('click', goHome);
+  // Picking a place drops it into the search bar on the home screen
+  document.querySelectorAll('.place[data-place]').forEach(btn => btn.addEventListener('click', () => {
+    document.querySelector('.search input').value = btn.dataset.place;
+    goHome();
+  }));
+  window.addEventListener('hashchange', () => { if (location.hash !== '#saved') cameFromHome = false; show(); });
+  show();
+})();
+
+// Location sharing switch on the map
+(function () {
+  const map = document.getElementById('map');
+  const sw = document.getElementById('shareSwitch');
+  const label = document.getElementById('shareLabel');
+  let on = true;
+  function set(v) {
+    on = v;
+    sw.setAttribute('aria-checked', String(on));
+    map.classList.toggle('hidden-loc', !on);
+    label.firstChild.textContent = on ? 'Sharing location' : 'Location hidden';
+    document.getElementById('shareSub').textContent = on ? 'Visible to 3 friends' : 'Friends can\'t see you';
+  }
+  sw.addEventListener('click', () => set(!on));
+
+  // Friend popups: tap to expand, tap elsewhere to close
+  const friends = document.querySelectorAll('.friend');
+  friends.forEach(f => f.addEventListener('click', e => {
+    e.stopPropagation();
+    const wasOpen = f.classList.contains('open');
+    friends.forEach(x => x.classList.remove('open'));
+    if (!wasOpen) f.classList.add('open');
+  }));
+  document.addEventListener('click', () => friends.forEach(x => x.classList.remove('open')));
+})();
+
+// Bike state: power, lock, SOS
+const bikeState = { power: true, locked: true, sos: false };
+(function () {
+  const powerBtn = document.getElementById('powerBtn');
+  const lockBtn = document.getElementById('lockBtn');
+  const sosBtn = document.getElementById('sosBtn');
+  const sheet = document.getElementById('sosSheet');
+  const CLOSED = 'M8 17 V11 a9 9 0 0 1 18 0 V17';
+  const OPEN = 'M8 17 V8 a9 9 0 0 1 18 0 V5';   // shackle swung up and open
+
+  function render() {
+    powerBtn.setAttribute('aria-pressed', String(bikeState.power));
+    document.getElementById('powerCap').textContent = bikeState.power ? 'On' : 'Off';
+    document.getElementById('powerText').textContent = bikeState.power ? 'On' : 'Off';
+    document.getElementById('powerStat').classList.toggle('on', bikeState.power);
+    document.getElementById('lockStat').classList.toggle('unlocked', !bikeState.locked);
+    lockBtn.setAttribute('aria-pressed', String(bikeState.locked));
+    document.getElementById('lockCap').textContent = bikeState.locked ? 'Locked' : 'Unlocked';
+    document.getElementById('lockText').textContent = bikeState.locked ? 'Locked' : 'Unlocked';
+    document.querySelectorAll('.shackle').forEach(p => p.setAttribute('d', bikeState.locked ? CLOSED : OPEN));
+    sosBtn.classList.toggle('active', bikeState.sos);
+    document.getElementById('sosConfirm').hidden = bikeState.sos;
+    document.getElementById('sosActive').hidden = !bikeState.sos;
+  }
+
+  powerBtn.addEventListener('click', () => { bikeState.power = !bikeState.power; render(); });
+  lockBtn.addEventListener('click', () => { bikeState.locked = !bikeState.locked; render(); });
+
+  const openSheet = () => { sheet.hidden = false; };
+  const closeSheet = () => { sheet.hidden = true; };
+  sosBtn.addEventListener('click', openSheet);
+  sheet.addEventListener('click', e => { if (e.target === sheet || e.target.closest('[data-close]')) closeSheet(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet(); });
+  document.getElementById('sosSend').addEventListener('click', () => {
+    Object.assign(bikeState, { sos: true, locked: true, power: false });
+    render();
+  });
+  // Prototype only: no real call is placed
+  let toastTimer;
+  document.getElementById('call911').addEventListener('click', () => {
+    const toast = document.getElementById('toast');
+    toast.innerHTML = '<span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1A17 17 0 0 1 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1z"/></svg></span><span>Calling 911…<small>Demo only. No call is placed.</small></span>';
+    toast.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { toast.hidden = true; }, 3500);
+  });
+  document.getElementById('sosStop').addEventListener('click', () => {
+    bikeState.sos = false;
+    render();
+    closeSheet();
+  });
+  render();
+})();
+
+// 3D bike
+(function () {
+  const stage = document.getElementById('bikeStage');
+  let renderer;
+  try {
+    if (!window.THREE) throw new Error('three.js missing');
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  } catch (e) { stage.classList.add('no-webgl'); return; }
+
+  const V = (x, y, z = 0) => new THREE.Vector3(x, y, z);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  stage.appendChild(renderer.domElement);
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 50);
+  camera.position.set(0, 0.8, 4.6);
+  camera.lookAt(0, 0, 0);
+
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x3a3a40, 0.75));
+  const key = new THREE.DirectionalLight(0xffffff, 0.9);
+  key.position.set(3, 4, 5); scene.add(key);
+  const rim = new THREE.DirectionalLight(0xbfd0ff, 1.1);
+  rim.position.set(-4, 3, -3); scene.add(rim);
+
+  const mat = (color, o = {}) => new THREE.MeshStandardMaterial(Object.assign({ color, roughness: 0.5, metalness: 0.2 }, o));
+  const M = {
+    frame: mat(0x3a62c0, { roughness: 0.35, metalness: 0.35 }),
+    tire: mat(0x1e1e20, { roughness: 0.9, metalness: 0 }),
+    rim: mat(0x9a9a9a, { roughness: 0.3, metalness: 0.8 }),
+    dark: mat(0x3a3a3e, { roughness: 0.6 }),
+    batt: mat(0x2a2d35, { roughness: 0.8, metalness: 0.1 }),
+    light: mat(0xfff2b0, { emissive: 0xffd95a, emissiveIntensity: 0.9 }),
+  };
+
+  const bike = new THREE.Group();
+
+  function tube(a, b, r, m) {
+    const dir = new THREE.Vector3().subVectors(b, a);
+    const mesh = new THREE.Mesh(new THREE.CylinderGeometry(r, r, dir.length(), 14), m);
+    mesh.position.copy(a).addScaledVector(dir, 0.5);
+    mesh.quaternion.setFromUnitVectors(V(0, 1), dir.normalize());
+    bike.add(mesh);
+    return mesh;
+  }
+
+  function wheel(x) {
+    const g = new THREE.Group();
+    g.add(new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.065, 16, 64), M.tire));
+    g.add(new THREE.Mesh(new THREE.TorusGeometry(0.48, 0.018, 8, 64), M.rim));
+    for (let i = 0; i < 18; i++) {
+      const s = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, 0.48, 4), M.rim);
+      const a = (i / 18) * Math.PI * 2;
+      s.position.set(Math.cos(a) * 0.24, Math.sin(a) * 0.24, (i % 2 ? 0.02 : -0.02));
+      s.rotation.z = a - Math.PI / 2;
+      g.add(s);
+    }
+    const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.14, 20), M.dark);
+    hub.rotation.x = Math.PI / 2;
+    g.add(hub);
+    g.position.set(x, 0, 0);
+    bike.add(g);
+    return g;
+  }
+  const rearWheel = wheel(-1.0), frontWheel = wheel(1.0);
+
+  // Key points (side view, from the 2D design)
+  const rearHub = V(-1, 0), frontHub = V(1, 0), bb = V(-0.2, -0.1);
+  const seatCluster = V(-0.5, 0.65), headTop = V(0.62, 0.9), headBot = V(0.7, 0.71);
+
+  // Chainstays + seat tube (step-through)
+  [-0.07, 0.07].forEach(z => tube(V(-0.2, -0.1, z * 0.5), V(-1, 0, z), 0.025, M.frame));
+  tube(bb, seatCluster, 0.04, M.frame);
+  // Rear stays up to seat cluster
+  [-0.07, 0.07].forEach(z => tube(V(-0.5, 0.65, z * 0.4), V(-1, 0, z), 0.018, M.frame));
+
+  // Curved down tube
+  const down = new THREE.CubicBezierCurve3(bb, V(0.05, 0.3), V(0.35, 0.6), headTop);
+  bike.add(new THREE.Mesh(new THREE.TubeGeometry(down, 40, 0.075, 16), M.frame));
+  // Battery pack on the down tube
+  const batt = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.11, 0.13), M.batt);
+  const bp = down.getPoint(0.45), bt = down.getTangent(0.45);
+  batt.position.copy(bp).add(V(-bt.y, bt.x).multiplyScalar(0.1));
+  batt.rotation.z = Math.atan2(bt.y, bt.x);
+  bike.add(batt);
+
+  // Head tube, fork, stem, bars
+  tube(headTop, headBot, 0.05, M.frame);
+  [-0.07, 0.07].forEach(z => tube(V(0.7, 0.71, z * 0.6), V(1, 0, z), 0.022, M.dark));
+  tube(headTop, V(0.7, 1.15), 0.025, M.dark);
+  tube(V(0.7, 1.15), V(0.86, 1.18), 0.022, M.dark);
+  tube(V(0.86, 1.18, -0.32), V(0.86, 1.18, 0.32), 0.022, M.dark);
+  [-0.3, 0.3].forEach(z => tube(V(0.86, 1.18, z * 0.85), V(0.86, 1.18, z), 0.032, M.tire));
+
+  // Headlight
+  const lamp = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.04, 0.07, 20), M.light);
+  lamp.rotation.z = -Math.PI / 2;
+  lamp.position.set(0.76, 0.78, 0);
+  bike.add(lamp);
+
+  // Seat post + saddle
+  tube(seatCluster, V(-0.55, 0.9), 0.022, M.dark);
+  const saddle = new THREE.Mesh(new THREE.SphereGeometry(1, 20, 12), M.tire);
+  saddle.scale.set(0.19, 0.045, 0.09);
+  saddle.position.set(-0.57, 0.93, 0);
+  bike.add(saddle);
+
+  // Rear rack
+  [-0.1, 0.1].forEach(z => {
+    tube(V(-1.3, 0.68, z), V(-0.6, 0.68, z), 0.014, M.dark);
+    tube(V(-1.2, 0.68, z), V(-1, 0, z), 0.012, M.dark);
+  });
+  [-1.25, -0.95, -0.65].forEach(x => tube(V(x, 0.68, -0.1), V(x, 0.68, 0.1), 0.012, M.dark));
+
+  // Fenders
+  function fender(x, start, arc) {
+    const f = new THREE.Mesh(new THREE.TorusGeometry(0.64, 0.02, 6, 40, arc), M.dark);
+    f.scale.z = 3.5;
+    f.rotation.z = start;
+    f.position.x = x;
+    bike.add(f);
+  }
+  fender(-1, Math.PI * 0.15, Math.PI * 0.8);
+  fender(1, Math.PI * 0.3, Math.PI * 0.55);
+
+  // Mid-drive motor + cranks + pedals
+  const motor = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.16, 24), M.dark);
+  motor.rotation.x = Math.PI / 2;
+  motor.position.copy(bb);
+  bike.add(motor);
+  const crank = new THREE.Group();
+  crank.position.copy(bb);
+  [[0.12, 1], [-0.12, -1]].forEach(([z, d]) => {
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.3, 0.025), M.rim);
+    arm.position.set(0, -0.15 * d, z); crank.add(arm);
+    const pedal = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.025, 0.12), M.tire);
+    pedal.position.set(0, -0.3 * d, z + 0.07 * d); crank.add(pedal);
+  });
+  bike.add(crank);
+
+  // Soft ground shadow
+  const shadow = new THREE.Mesh(
+    new THREE.CircleGeometry(1, 40),
+    new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.06 })
+  );
+  shadow.rotation.x = -Math.PI / 2;
+  shadow.scale.set(1.75, 0.45, 1);
+  shadow.position.y = -0.63;
+
+  const root = new THREE.Group();
+  bike.position.y = -0.05;
+  root.add(bike, shadow);
+  root.position.y = -0.2;
+  root.rotation.x = 0.06;
+  scene.add(root);
+
+  // Sizing
+  function resize() {
+    const w = stage.clientWidth, h = stage.clientHeight;
+    if (!w || !h) return; // stage hidden on another page
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.position.z = Math.max(4.6, 5.9 / camera.aspect); // keep whole bike in view
+    camera.updateProjectionMatrix();
+  }
+  new ResizeObserver(resize).observe(stage);
+  resize();
+
+  // Rotate only on swipe (with a little inertia after a flick)
+  let angle = 0.5, vel = 0, dragging = false, lastX = 0, lastT = performance.now();
+  stage.addEventListener('pointerdown', e => { dragging = true; vel = 0; lastX = e.clientX; stage.setPointerCapture(e.pointerId); });
+  stage.addEventListener('pointermove', e => {
+    if (!dragging) return;
+    const dx = e.clientX - lastX; lastX = e.clientX;
+    angle += dx * 0.012; vel = dx * 0.012 * 60;
+  });
+  const end = () => { dragging = false; };
+  stage.addEventListener('pointerup', end);
+  stage.addEventListener('pointercancel', end);
+
+  function frame(t) {
+    const dt = Math.min((t - lastT) / 1000, 0.05); lastT = t;
+    if (!dragging) {
+      vel *= Math.pow(0.02, dt);          // flick slows to a stop
+      if (Math.abs(vel) < 0.01) vel = 0;
+      angle += vel * dt;
+    }
+    root.rotation.y = angle;
+    M.light.emissiveIntensity = bikeState.sos ? (Math.sin(t / 120) > 0 ? 1.2 : 0) : (bikeState.power ? 0.9 : 0);
+    M.light.color.setHex(bikeState.power || bikeState.sos ? 0xfff2b0 : 0x55555a);
+    renderer.render(scene, camera);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
