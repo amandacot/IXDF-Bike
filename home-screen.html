@@ -50,13 +50,46 @@
     padding: 0 12px;
     gap: 10px;
   }
+  .search input::placeholder { color: var(--muted); }
   .search input {
     flex: 1; border: none; background: transparent;
     font-size: 18px; outline: none; color: var(--ink);
   }
 
   /* ---------- Top bar: search + profile ---------- */
-  .topbar { display: flex; align-items: center; gap: 10px; }
+  .topbar { display: flex; align-items: center; gap: 10px; position: relative; z-index: 10; }
+
+  /* ---------- Recent searches popup ---------- */
+  .recents {
+    position: absolute; top: calc(100% + 8px); left: 0; right: 0;
+    background: #1d1d21;
+    border-radius: 16px;
+    padding: 8px 6px;
+    box-shadow: 0 12px 32px rgba(0,0,0,.55);
+    animation: drop-in .15s ease-out;
+  }
+  .recents[hidden] { display: none; }
+  @keyframes drop-in { from { opacity: 0; transform: translateY(-6px); } }
+  .recents-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding: 4px 10px 6px;
+    font-size: 12px; color: var(--muted); letter-spacing: .04em; text-transform: uppercase;
+  }
+  .recent {
+    width: 100%; display: flex; align-items: center; gap: 12px;
+    padding: 9px 10px; border: none; border-radius: 10px;
+    background: transparent; color: var(--ink); font: inherit; text-align: left; cursor: pointer;
+  }
+  .recent:hover, .recent.active { background: var(--pill); }
+  .recent .clock {
+    flex: none; width: 34px; height: 34px; border-radius: 50%;
+    background: var(--pill); color: var(--muted);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .recent .name { font-size: 16px; font-weight: 500; line-height: 1.2; }
+  .recent .sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .recent .saved-tag { color: var(--me); }
+  .recents .empty { padding: 10px; font-size: 14px; color: var(--muted); }
   .topbar .search { flex: 1; min-width: 0; }
   .round-btn {
     flex: none; width: 52px; height: 52px; border-radius: 50%;
@@ -95,13 +128,45 @@
 
   /* ---------- Map (teammate) ---------- */
   .map {
-    height: 282px;
+    aspect-ratio: 408 / 380;      /* matches the SVG so pins and routes line up on any phone width */
     border-radius: 10px;
     overflow: hidden;
     background: var(--map-bg);
     position: relative;
   }
   .map > svg { width: 100%; height: 100%; display: block; }
+
+  /* ---------- Routes drawn on the map ---------- */
+  .route-line { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .route-line.casing { stroke: #0b0b0d; stroke-width: 11; }
+  .route-line.color { stroke-width: 6; stroke-dasharray: 1; stroke-dashoffset: 0; animation: draw .7s ease-out; }
+  @keyframes draw { from { stroke-dashoffset: 1; } }
+  .route-group[hidden] { display: none; }
+
+  .dest-pin { display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -100%); }
+  .dest-pin[hidden] { display: none; }
+  .dest-pin .label {
+    background: var(--ink); color: var(--surface);
+    font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 10px; white-space: nowrap;
+    margin-bottom: 3px;
+  }
+
+  .pin.route-callout {
+    transform: translate(-50%, -50%);
+    display: flex; flex-direction: row; align-items: center; gap: 6px;
+    padding: 5px 10px 5px 8px;
+    background: #111114; color: var(--ink);
+    border: 2px solid var(--route, #fff);
+    border-radius: 14px;
+    box-shadow: 0 4px 14px rgba(0,0,0,.5);
+    font-size: 12px; white-space: nowrap; z-index: 2;
+    animation: pop .25s ease-out .45s both;
+  }
+  .route-callout[hidden] { display: none; }
+  .route-callout svg { flex: none; display: block; color: var(--route); }
+  .route-callout b { font-size: 14px; }
+  .route-callout .eta { color: var(--muted); }
+  @keyframes pop { from { opacity: 0; transform: translate(-50%, -50%) scale(.8); } }
 
   /* ---------- Map markers ---------- */
   .pin {
@@ -169,29 +234,23 @@
   .switch[aria-checked="false"] { background: var(--pill-active); }
   .switch[aria-checked="false"]::after { left: 3px; }
 
-  /* ---------- Saved routes (replaces battery rows) ---------- */
-  .routes { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+  /* ---------- Route pills (above map) ---------- */
+  .routes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
   .route {
-    display: flex; align-items: center; gap: 16px;
-    padding: 10px 14px;
-    border-radius: 10px;
-    border: none; background: transparent;
-    text-align: left; cursor: pointer; width: 100%;
-    font: inherit; color: inherit;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+    height: 44px; padding: 0 6px;
+    border: none; border-radius: 22px;
+    background: var(--pill); color: var(--ink);
+    font: inherit; cursor: pointer;
+    transition: background .15s, color .15s;
   }
-  .route.selected { background: var(--pill); }
-  .route .icon { flex: none; width: 58px; display: flex; justify-content: center; }
-  .route .name { font-size: 21px; font-weight: 500; line-height: 1.2; }
-  .route .battery { font-size: 13px; color: var(--muted); margin-top: 3px; }
-
-  .confirm {
-    align-self: center;
-    width: 194px; height: 34px;
-    border: none; border-radius: 10px;
-    background: var(--pill);
-    font: inherit; font-size: 18px; color: var(--ink);
-    cursor: pointer;
-  }
+  .route:active { background: var(--pill-active); }
+  .route .top { display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 600; line-height: 1; white-space: nowrap; }
+  .route .top svg { flex: none; display: block; }
+  .route.selected { background: var(--route); color: #111; }
+  .route[data-route="safest"] { --route: #4dd0a0; }
+  .route[data-route="fastest"] { --route: #6aa8ff; }
+  .route[data-route="lit"] { --route: #f5d547; }
 
   /* ---------- 3D bike model (mine) ---------- */
   .bike-area {
@@ -214,16 +273,16 @@
     display: flex; flex-direction: column; gap: 10px;
   }
   .stat { padding-left: 4px; }
-  .stat dt { font-size: 12px; color: var(--muted); line-height: 1.2; letter-spacing: .02em; }
+  .stat dt { font-size: 11px; color: var(--muted); line-height: 1.2; letter-spacing: .02em; }
   .stat dd {
     display: flex; align-items: center; gap: 7px;
-    font-size: 21px; font-weight: 600; line-height: 1.2; margin-top: 2px;
+    font-size: 17px; font-weight: 600; line-height: 1.2; margin-top: 2px;
   }
-  .stat dd svg { flex: none; display: block; }
+  .stat dd svg { flex: none; display: block; transform: scale(.85); transform-origin: left center; }
   #powerStat.on dd svg { color: var(--ok); }
   #powerStat:not(.on) dd { color: var(--muted); }
   #lockStat.unlocked dd svg { color: var(--warn); }
-  .stat .unit { font-size: 14px; font-weight: 500; margin-left: -4px; }
+  .stat .unit { font-size: 12px; font-weight: 500; margin-left: -4px; }
 
   /* ---------- Bottom nav ---------- */
   .controls {
@@ -330,8 +389,10 @@
         <path d="M8 12 a6 6 0 0 1 6-5" stroke-width="1.5"/>
         <path d="M21.5 21.5 L33 33" stroke-width="4" stroke-linecap="round"/>
       </svg>
-      <input type="text" aria-label="Search">
+      <input type="text" id="searchInput" aria-label="Search" placeholder="Where to?"
+             autocomplete="off" role="combobox" aria-expanded="false" aria-controls="recents">
     </label>
+    <div class="recents" id="recents" role="listbox" aria-label="Recent searches" hidden></div>
     <button class="round-btn" aria-label="Profile">
       <svg width="30" height="30" viewBox="0 0 30 30" fill="none" stroke="currentColor" stroke-width="2.2">
         <circle cx="15" cy="10" r="6"/>
@@ -340,88 +401,83 @@
     </button>
   </div>
 
+  <!-- Route options (each shows est. battery remaining) -->
+  <section class="routes" aria-label="Route options">
+    <button class="route" data-route="safest" aria-pressed="false">
+      <span class="top"><svg width="15" height="17" viewBox="0 0 40 44" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linejoin="round"><path d="M20 3 L36 9 V21 C36 31 29 38 20 41 C11 38 4 31 4 21 V9 Z"/><path d="M13 22 L18 27 L28 16" stroke-linecap="round"/></svg>Safest</span>
+    </button>
+    <button class="route" data-route="fastest" aria-pressed="false">
+      <span class="top"><svg width="14" height="17" viewBox="0 0 40 44" fill="currentColor"><path d="M23 2 L6 25 H18 L15 42 L34 17 H22 Z"/></svg>Fastest</span>
+    </button>
+    <button class="route" data-route="lit" aria-pressed="false">
+      <span class="top"><svg width="15" height="17" viewBox="0 0 40 44" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 4 a11 11 0 0 0-6.5 19.9 C15 25 15.5 27 15.5 29 H24.5 C24.5 27 25 25 26.5 23.9 A11 11 0 0 0 20 4 Z"/><path d="M16 34 H24 M17.5 39 H22.5"/></svg>Best lit</span>
+    </button>
+  </section>
+
   <!-- GPS map placeholder -->
   <div class="map" id="map" aria-label="Map">
-    <svg viewBox="0 0 408 282" preserveAspectRatio="xMidYMid slice">
-      <g stroke="#333338" stroke-width="1" fill="none">
-        <path d="M0 40 L408 20"/><path d="M0 90 L408 70"/><path d="M0 150 L408 120"/><path d="M0 210 L408 190"/><path d="M0 260 L408 245"/>
-        <path d="M60 0 L90 282"/><path d="M140 0 L170 282"/><path d="M220 0 L240 282"/><path d="M300 0 L320 282"/><path d="M370 0 L390 282"/>
-        <path d="M120 120 L260 60 L408 40"/><path d="M0 200 L130 160 L250 230 L408 210"/>
+    <svg id="mapSvg" viewBox="0 0 408 380">
+      <!-- water -->
+      <path d="M260 0 C300 40 340 50 408 40" stroke="#0a0a0b" stroke-width="26" fill="none"/>
+      <path d="M0 300 C40 290 70 330 120 345 C170 360 200 380 220 390" stroke="#0a0a0b" stroke-width="22" fill="none"/>
+      <!-- side streets -->
+      <g stroke="#2b2b30" stroke-width="1.5" fill="none"><path d="M20 0 V380"/><path d="M70 0 V380"/><path d="M120 0 V380"/><path d="M240 0 V380"/><path d="M290 0 V380"/><path d="M330 0 V380"/><path d="M380 0 V380"/><path d="M0 30 H408"/><path d="M0 70 H408"/><path d="M0 160 H408"/><path d="M0 205 H408"/><path d="M0 300 H408"/><path d="M0 345 H408"/></g>
+      <!-- main (well-lit) streets -->
+      <g stroke="#3d3d44" stroke-width="3.5" fill="none">
+        <path d="M0 250 H408"/><path d="M170 0 V380"/><path d="M0 115 H408"/>
       </g>
-      <g stroke="#4a4a4a" stroke-width="2.5" fill="none">
-        <path d="M150 0 L260 110 L408 170"/><path d="M0 120 L200 150 L300 282"/>
+      <!-- diagonal avenue -->
+      <path d="M408 304 L0 22" stroke="#3d3d44" stroke-width="5" fill="none"/>
+      <text x="26" y="238" fill="#8a8a92" font-size="10" font-family="sans-serif">Pittsburgh</text>
+
+      <!-- Routes (hidden until a pill is chosen) -->
+      <g class="route-group" data-route="safest" hidden>
+        <path class="route-line casing" d="M330 250 V160 H240 V70 H70"/>
+        <path class="route-line color" pathLength="1" stroke="#4dd0a0" d="M330 250 V160 H240 V70 H70"/>
       </g>
-      <path d="M0 160 C60 150 90 110 150 95 C200 85 240 40 300 0" stroke="#0a0a0b" stroke-width="16" fill="none"/>
-      <path d="M0 200 C50 195 70 250 140 260 C200 268 260 250 330 282" stroke="#0a0a0b" stroke-width="12" fill="none"/>
-      <text x="40" y="212" fill="#9a9a9a" font-size="9" font-family="sans-serif">Pittsburgh</text>
+      <g class="route-group" data-route="fastest" hidden>
+        <path class="route-line casing" d="M330 250 L70 70"/>
+        <path class="route-line color" pathLength="1" stroke="#6aa8ff" d="M330 250 L70 70"/>
+      </g>
+      <g class="route-group" data-route="lit" hidden>
+        <path class="route-line casing" d="M330 250 H170 V115 H70 V70"/>
+        <path class="route-line color" pathLength="1" stroke="#f5d547" d="M330 250 H170 V115 H70 V70"/>
+      </g>
     </svg>
 
+    <!-- Destination -->
+    <div class="pin dest-pin" id="destPin" style="left:17.2%; top:18.4%; transform: translate(-50%, calc(-100% + 4px))" hidden>
+      <span class="label" id="destLabel">The Corner Tap</span>
+      <svg width="22" height="28" viewBox="0 0 22 28"><path d="M11 27 C4 18 1 14 1 10 a10 10 0 0 1 20 0 c0 4-3 8-10 17z" fill="#f2f2f4"/><circle cx="11" cy="10" r="4" fill="#111"/></svg>
+    </div>
+
     <!-- Friends (tap a friend for details) -->
-    <button class="pin friend" style="left:28%; top:27%" aria-label="Jess, 0.8 miles away">
+    <button class="pin friend" style="left:73.5%; top:19.7%" aria-label="Jess, 0.8 miles away">
       <span class="bubble">Jess<span class="more"> · 0.8 mi · 2m ago</span></span>
       <span class="avatar" style="background:#ff9a76">J</span>
     </button>
-    <button class="pin friend" style="left:57%; top:47%" aria-label="Sam, 0.4 miles away">
+    <button class="pin friend" style="left:57.6%; top:55.3%" aria-label="Sam, 0.4 miles away">
       <span class="bubble">Sam<span class="more"> · 0.4 mi · riding</span></span>
       <span class="avatar" style="background:#f2c94c">S</span>
     </button>
-    <button class="pin friend" style="left:13%; top:56%" aria-label="Marcus, 1.6 miles away">
+    <button class="pin friend" style="left:17.2%; top:51.3%" aria-label="Marcus, 1.6 miles away">
       <span class="bubble">Marcus<span class="more"> · 1.6 mi · 12m ago</span></span>
       <span class="avatar" style="background:#7fd1ff">M</span>
     </button>
 
-    <!-- You -->
-    <div class="pin" style="left:82%; top:54%" aria-hidden="true"><span class="me-dot"></span></div>
+    <!-- Battery estimate for the chosen route -->
+    <div class="pin route-callout" id="routeCallout" hidden></div>
 
-    <!-- Location sharing on/off -->
+    <!-- You -->
+    <div class="pin" style="left:80.9%; top:65.8%" aria-hidden="true"><span class="me-dot"></span></div>
+
+  <!-- Location sharing on/off -->
     <div class="share-bar">
       <span class="status-dot"></span>
       <span class="label" id="shareLabel">Sharing location<span class="sub" id="shareSub">Visible to 3 friends</span></span>
       <button class="switch" id="shareSwitch" role="switch" aria-checked="true" aria-label="Share my location"></button>
     </div>
   </div>
-
-  <!-- Saved routes (each shows est. battery) -->
-  <section class="routes" aria-label="Saved routes">
-    <button class="route selected">
-      <span class="icon">
-        <svg width="40" height="44" viewBox="0 0 40 44" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round">
-          <path d="M20 3 L36 9 V21 C36 31 29 38 20 41 C11 38 4 31 4 21 V9 Z"/>
-          <path d="M13 22 L18 27 L28 16" stroke-linecap="round"/>
-        </svg>
-      </span>
-      <span>
-        <div class="name">Safest Route</div>
-        <div class="battery">Est. battery remaining: 74%</div>
-      </span>
-    </button>
-    <button class="route">
-      <span class="icon">
-        <svg width="40" height="44" viewBox="0 0 40 44" fill="currentColor">
-          <path d="M23 2 L6 25 H18 L15 42 L34 17 H22 Z"/>
-        </svg>
-      </span>
-      <span>
-        <div class="name">Fastest Route</div>
-        <div class="battery">Est. battery remaining: 68%</div>
-      </span>
-    </button>
-    <button class="route">
-      <span class="icon">
-        <svg width="40" height="44" viewBox="0 0 40 44" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M20 4 a11 11 0 0 0-6.5 19.9 C15 25 15.5 27 15.5 29 H24.5 C24.5 27 25 25 26.5 23.9 A11 11 0 0 0 20 4 Z"/>
-          <path d="M16 34 H24 M17.5 39 H22.5"/>
-          <path d="M20 12 a5 5 0 0 0-5 5" stroke-width="1.6"/>
-        </svg>
-      </span>
-      <span>
-        <div class="name">Best Lit Route</div>
-        <div class="battery">Est. battery remaining: 71%</div>
-      </span>
-    </button>
-  </section>
-
-  <button class="confirm">Confirm</button>
 
   <!-- Bike stats + 3D bike model (swipe to rotate) -->
   <div class="bike-area">
@@ -625,13 +681,94 @@
 </main>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
-// Route selection
-document.querySelectorAll('.route').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.route').forEach(b => b.classList.remove('selected'));
-    btn.classList.add('selected');
+// Route selection: draw the route on the map with its battery estimate
+(function () {
+  const ROUTES = {
+    safest:  { color: '#4dd0a0', battery: 74, eta: '18 min', at: 0.5 },
+    fastest: { color: '#6aa8ff', battery: 68, eta: '12 min', at: 0.7 },
+    lit:     { color: '#f5d547', battery: 71, eta: '15 min', at: 0.55 },
+  };
+  const pills = document.querySelectorAll('.route');
+  const groups = document.querySelectorAll('.route-group');
+  const callout = document.getElementById('routeCallout');
+  const dest = document.getElementById('destPin');
+  const destLabel = document.getElementById('destLabel');
+  const search = document.getElementById('searchInput');
+  let current = null;
+
+  function show(key) {
+    current = key;
+    pills.forEach(p => {
+      const on = p.dataset.route === key;
+      p.classList.toggle('selected', on);
+      p.setAttribute('aria-pressed', String(on));
+    });
+    groups.forEach(g => g.toggleAttribute('hidden', g.dataset.route !== key)); // SVG has no .hidden property
+    dest.hidden = callout.hidden = !key;
+    if (!key) return;
+
+    const r = ROUTES[key];
+    destLabel.textContent = search.value.trim() || 'The Corner Tap';
+    // Place the callout partway along the route
+    const path = document.querySelector(`.route-group[data-route="${key}"] .casing`);
+    const pt = path.getPointAtLength(path.getTotalLength() * r.at);
+    callout.style.left = (pt.x / 408 * 100) + '%';
+    callout.style.top = (pt.y / 380 * 100) + '%';
+    callout.style.setProperty('--route', r.color);
+    const fill = (23 * r.battery / 100).toFixed(1);
+    callout.innerHTML = `<svg width="22" height="12" viewBox="0 0 34 18" fill="none"><rect x="1" y="1" width="28" height="16" rx="3.5" stroke="currentColor" stroke-width="2.4"/><rect x="30.5" y="5.5" width="2.5" height="7" rx="1" fill="currentColor"/><rect x="3.5" y="3.5" width="${fill}" height="11" rx="1.5" fill="currentColor"/></svg><span><b>${r.battery}%</b> left</span><span class="eta">· ${r.eta}</span>`;
+    callout.setAttribute('aria-label', `Estimated ${r.battery}% battery left on arrival, ${r.eta}`);
+    // restart the draw-in + pop animations
+    callout.style.animation = 'none'; callout.offsetWidth; callout.style.animation = '';
+  }
+
+  // Tap a pill to show its route; tap it again to clear
+  pills.forEach(p => p.addEventListener('click', () => show(current === p.dataset.route ? null : p.dataset.route)));
+})();
+
+// Recent searches popup (pulled from saved places)
+(function () {
+  const input = document.getElementById('searchInput');
+  const box = document.getElementById('recents');
+  const recents = [
+    { name: "Jess's place", sub: 'Social · 2.1 mi' },
+    { name: 'Home', sub: '412 Maple St' },
+    { name: 'The Corner Tap', sub: 'Bar · 1.4 mi' },
+    { name: 'Work', sub: '5000 Forbes Ave' },
+  ];
+  const clock = '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="10" cy="10" r="8"/><path d="M10 5.5 V10 L13 12"/></svg>';
+  let shown = [], active = -1;
+
+  function render() {
+    const q = input.value.trim().toLowerCase();
+    shown = recents.filter(r => !q || (r.name + ' ' + r.sub).toLowerCase().includes(q));
+    active = Math.min(active, shown.length - 1);
+    box.innerHTML = '<div class="recents-head"><span>Recent</span></div>' + (shown.length
+      ? shown.map((r, i) => `<button class="recent${i === active ? ' active' : ''}" role="option" data-i="${i}">
+          <span class="clock">${clock}</span>
+          <span><div class="name">${r.name}</div><div class="sub"><span class="saved-tag">♥ Saved</span> · ${r.sub}</div></span>
+        </button>`).join('')
+      : '<div class="empty">No matching recent searches</div>');
+  }
+  function open() { render(); box.hidden = false; input.setAttribute('aria-expanded', 'true'); }
+  function close() { box.hidden = true; active = -1; input.setAttribute('aria-expanded', 'false'); }
+  function pick(i) { input.value = shown[i].name; close(); input.blur(); }
+
+  input.addEventListener('focus', open);
+  input.addEventListener('click', open);
+  input.addEventListener('input', () => { active = -1; open(); });
+  input.addEventListener('keydown', e => {
+    if (box.hidden) return;
+    if (e.key === 'ArrowDown') { active = Math.min(active + 1, shown.length - 1); render(); e.preventDefault(); }
+    else if (e.key === 'ArrowUp') { active = Math.max(active - 1, 0); render(); e.preventDefault(); }
+    else if (e.key === 'Enter' && active >= 0) { pick(active); e.preventDefault(); }
+    else if (e.key === 'Escape') { close(); input.blur(); }
   });
-});
+  box.addEventListener('mousedown', e => e.preventDefault()); // keep focus while tapping
+  box.addEventListener('click', e => { const b = e.target.closest('.recent'); if (b) pick(+b.dataset.i); });
+  document.addEventListener('click', e => { if (!e.target.closest('.topbar')) close(); });
+  input.addEventListener('blur', () => setTimeout(() => { if (document.activeElement !== input) close(); }, 0));
+})();
 
 // Simple two-page navigation (#saved = Saved Locations)
 (function () {
