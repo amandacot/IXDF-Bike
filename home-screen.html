@@ -93,6 +93,7 @@
   }
   .recent .name { font-size: 16px; font-weight: 500; line-height: 1.2; }
   .recent .sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .recent .name, .recent .sub { display: block; overflow-wrap: anywhere; }
   .recent .saved-tag { color: var(--me); }
   .recents .empty { padding: 10px; font-size: 14px; color: var(--muted); }
   .topbar .search { flex: 1; min-width: 0; }
@@ -105,12 +106,14 @@
 
   /* ---------- Views ---------- */
   .view { display: flex; flex-direction: column; gap: 10px; }
-  #homeView { flex: 1; min-height: 0; }
+  #homeView { flex: 1; min-height: 0; overflow-y: auto; }
   .view[hidden] { display: none; }
 
   /* ---------- Saved locations page ---------- */
   .page-head { display: flex; align-items: center; gap: 12px; height: 52px; }
   .page-head h1 { font-size: 24px; font-weight: 600; }
+  #placeView .page-head { min-height: 52px; height: auto; }
+  #placeHeading { overflow-wrap: anywhere; min-width: 0; }
   .places { list-style: none; display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
   .place {
     width: 100%; display: flex; align-items: center; gap: 14px;
@@ -128,13 +131,41 @@
   .place .text { flex: 1; min-width: 0; }
   .place .name { font-size: 19px; font-weight: 500; line-height: 1.2; }
   .place .addr { font-size: 13px; color: var(--muted); margin-top: 3px; }
+  .place .name, .place .addr { display: block; }
+  .place .text, .place-details { overflow-wrap: anywhere; }
   .place .chev { flex: none; color: var(--muted); }
   .place.add .badge { background: transparent; border: 2px dashed var(--pill-active); }
   .place.add .name { color: var(--muted); }
+  .saved-empty { color: var(--muted); padding: 0 8px; }
+
+  .place-details {
+    display: grid; gap: 12px; padding: 16px; border-radius: 16px;
+    background: var(--pill);
+  }
+  .place-details[hidden] { display: none; }
+  .place-details p { color: var(--muted); }
+  .place-details label { display: grid; gap: 6px; font-size: 14px; }
+  .place-details input {
+    width: 100%; padding: 10px 12px; border: 1px solid #666671; border-radius: 10px;
+    color: var(--ink); background: var(--surface); font: inherit; font-size: 16px;
+  }
+  .place-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+  .place-action {
+    flex: 1 0 auto; min-height: 44px; padding: 8px 14px; border: 0; border-radius: 12px;
+    background: var(--pill-active); color: var(--ink); font: inherit; font-weight: 600;
+    cursor: pointer;
+  }
+  .place-action.primary { background: #6aa8ff; color: #111; }
+  .place-action.danger { color: #ff9a9e; }
+  .trip-card h2, .bike-status-head h2 { font-size: 17px; }
+  .trip-card { gap: 8px; }
+  .trip-card p, .bike-status-head p { font-size: 13px; color: var(--muted); }
+  .trip-card .place-actions { margin-top: 4px; }
+  .bike-status-head { display: grid; gap: 4px; }
 
   /* ---------- Map (teammate) ---------- */
   .map {
-    flex: 1 1 auto; min-height: 200px;   /* grows/shrinks to fill the screen; pins are placed by JS */
+    flex: 1 0 200px; min-height: 200px;  /* fill available height while keeping the map readable */
     border-radius: 10px;
     overflow: hidden;
     background: var(--map-bg);
@@ -149,12 +180,13 @@
   @keyframes draw { from { stroke-dashoffset: 1; } }
   .route-group[hidden] { display: none; }
 
-  .dest-pin { display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -100%); }
+  .pin.dest-pin { transform: translate(-50%, calc(-100% + 1px)); }
   .dest-pin[hidden] { display: none; }
   .dest-pin .label {
     background: var(--ink); color: var(--surface);
     font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 10px; white-space: nowrap;
     margin-bottom: 3px;
+    max-width: 96px; overflow: hidden; text-overflow: ellipsis;
   }
 
   .pin.route-callout {
@@ -251,8 +283,10 @@
     transition: background .15s, color .15s;
   }
   .route:active { background: var(--pill-active); }
+  .route:disabled { opacity: .45; cursor: default; }
   .route .top { display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 600; line-height: 1; white-space: nowrap; }
   .route .top svg { flex: none; display: block; }
+  .route .route-eta { font-size: 11px; line-height: 1; }
   .route.selected { background: var(--route); color: #111; }
   .route[data-route="safest"] { --route: #4dd0a0; }
   .route[data-route="fastest"] { --route: #6aa8ff; }
@@ -407,21 +441,24 @@
     </button>
   </div>
 
-  <!-- Route options (each shows est. battery remaining) -->
+  <!-- Route options and estimated ride times -->
   <section class="routes" aria-label="Route options">
     <button class="route" data-route="safest" aria-pressed="false">
       <span class="top"><svg width="15" height="17" viewBox="0 0 40 44" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linejoin="round"><path d="M20 3 L36 9 V21 C36 31 29 38 20 41 C11 38 4 31 4 21 V9 Z"/><path d="M13 22 L18 27 L28 16" stroke-linecap="round"/></svg>Safest</span>
+      <span class="route-eta" hidden></span>
     </button>
     <button class="route" data-route="fastest" aria-pressed="false">
       <span class="top"><svg width="14" height="17" viewBox="0 0 40 44" fill="currentColor"><path d="M23 2 L6 25 H18 L15 42 L34 17 H22 Z"/></svg>Fastest</span>
+      <span class="route-eta" hidden></span>
     </button>
     <button class="route" data-route="lit" aria-pressed="false">
       <span class="top"><svg width="15" height="17" viewBox="0 0 40 44" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 4 a11 11 0 0 0-6.5 19.9 C15 25 15.5 27 15.5 29 H24.5 C24.5 27 25 25 26.5 23.9 A11 11 0 0 0 20 4 Z"/><path d="M16 34 H24 M17.5 39 H22.5"/></svg>Best lit</span>
+      <span class="route-eta" hidden></span>
     </button>
   </section>
 
   <!-- GPS map placeholder -->
-  <div class="map" id="map" aria-label="Map">
+  <div class="map hidden-loc" id="map" aria-label="Map">
     <svg id="mapSvg" viewBox="0 0 408 380" preserveAspectRatio="xMidYMid meet" style="overflow: visible">
       <!-- water -->
       <path d="M230 -60 C250 -20 270 0 300 30 C340 50 380 45 700 20" stroke="#0a0a0b" stroke-width="26" fill="none"/>
@@ -436,24 +473,16 @@
       <path d="M700 505.8 L-300 -185.3" stroke="#3d3d44" stroke-width="5" fill="none"/>
       <text x="26" y="238" fill="#8a8a92" font-size="10" font-family="sans-serif">Pittsburgh</text>
 
-      <!-- Routes (hidden until a pill is chosen) -->
-      <g class="route-group" data-route="safest" hidden>
-        <path class="route-line casing" d="M330 250 V160 H240 V70 H70"/>
-        <path class="route-line color" pathLength="1" stroke="#4dd0a0" d="M330 250 V160 H240 V70 H70"/>
-      </g>
-      <g class="route-group" data-route="fastest" hidden>
-        <path class="route-line casing" d="M330 250 L70 70"/>
-        <path class="route-line color" pathLength="1" stroke="#6aa8ff" d="M330 250 L70 70"/>
-      </g>
-      <g class="route-group" data-route="lit" hidden>
-        <path class="route-line casing" d="M330 250 H170 V115 H70 V70"/>
-        <path class="route-line color" pathLength="1" stroke="#f5d547" d="M330 250 H170 V115 H70 V70"/>
+      <!-- The chosen route is drawn between the rider and destination pins. -->
+      <g class="route-group" id="routeGroup" hidden>
+        <path class="route-line casing" id="routePath"/>
+        <path class="route-line color" id="routeColor" pathLength="1"/>
       </g>
     </svg>
 
     <!-- Destination -->
-    <div class="pin dest-pin" id="destPin" data-x="70" data-y="70" style="transform: translate(-50%, calc(-100% + 4px))" hidden>
-      <span class="label" id="destLabel">The Corner Tap</span>
+    <div class="pin dest-pin" id="destPin" hidden>
+      <span class="label" id="destLabel"></span>
       <svg width="22" height="28" viewBox="0 0 22 28"><path d="M11 27 C4 18 1 14 1 10 a10 10 0 0 1 20 0 c0 4-3 8-10 17z" fill="#f2f2f4"/><circle cx="11" cy="10" r="4" fill="#111"/></svg>
     </div>
 
@@ -472,20 +501,33 @@
     </button>
 
     <!-- Battery estimate for the chosen route -->
-    <div class="pin route-callout" id="routeCallout" data-x="0" data-y="0" hidden></div>
+    <div class="pin route-callout" id="routeCallout" role="status" hidden></div>
 
     <!-- You -->
-    <div class="pin" data-x="330" data-y="250"  aria-hidden="true"><span class="me-dot"></span></div>
+    <div class="pin" id="riderPin" aria-hidden="true"><span class="me-dot"></span></div>
 
   <!-- Location sharing on/off -->
-    <div class="share-bar">
+    <div class="share-bar" role="group" aria-label="Location sharing">
       <span class="status-dot"></span>
-      <span class="label" id="shareLabel">Sharing location<span class="sub" id="shareSub">Visible to 3 friends</span></span>
-      <button class="switch" id="shareSwitch" role="switch" aria-checked="true" aria-label="Share my location"></button>
+      <span class="label"><span id="shareLabel">Location hidden</span><span class="sub" id="shareSub" role="status">Friends can’t see you</span></span>
+      <button class="switch" id="shareSwitch" role="switch" aria-checked="false" aria-label="Share my location"></button>
     </div>
   </div>
 
+  <section class="place-details trip-card" id="tripCard" aria-labelledby="tripHeading" hidden>
+    <h2 id="tripHeading"></h2>
+    <p id="tripSummary"></p>
+    <div class="place-actions">
+      <button class="place-action primary" id="shareTrip">Share location &amp; ETA</button>
+      <button class="place-action" id="arriveTrip">I’ve arrived</button>
+    </div>
+  </section>
+
   <!-- Bike stats + 3D bike model (swipe to rotate) -->
+  <div class="bike-status-head">
+    <h2 id="bikeStatusHeading" tabindex="-1">Bike status</h2>
+    <p id="parkedPlace" role="status" hidden></p>
+  </div>
   <div class="bike-area">
     <dl class="bike-stats" aria-label="Bike status">
       <div class="stat">
@@ -565,9 +607,10 @@
       <button class="round-btn" id="backBtn" aria-label="Back">
         <svg width="14" height="22" viewBox="0 0 14 22" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M11 2 L3 11 L11 20"/></svg>
       </button>
-      <h1>Saved Locations</h1>
+      <h1 id="savedHeading" tabindex="-1">Saved Locations</h1>
     </div>
-    <ul class="places">
+    <p class="saved-empty" id="savedEmpty" hidden>No saved locations.</p>
+    <ul class="places" id="placesList">
       <li><button class="place" data-place="Home">
         <span class="badge"><svg width="46" height="38" viewBox="0 0 46 38" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round">
         <path d="M3 19 L23 2 L43 19"/><path d="M8 15 V36 H38 V15"/><path d="M18 36 V24 H28 V36"/>
@@ -596,16 +639,57 @@
         <span class="badge"><svg width="34" height="38" viewBox="0 0 34 38" fill="currentColor">
         <path d="M2 2 H32 L19 18 V33 H27 V37 H7 V33 H15 V18 Z"/>
       </svg></span>
-        <span class="text"><div class="name">Bar</div><div class="addr">The Corner Tap · 1.4 mi</div></span>
+        <span class="text"><div class="name">Bar</div><div class="addr">Mary’s · 1.4 mi</div></span>
         <svg class="chev" width="10" height="16" viewBox="0 0 10 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 2 L8 8 L2 14"/></svg>
       </button></li>
-      <li><button class="place add">
+      <li><button class="place add" id="addPlace">
         <span class="badge">
           <svg width="22" height="22" viewBox="0 0 22 22" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M11 3 V19 M3 11 H19"/></svg>
         </span>
         <span class="text"><div class="name">Add a place</div></span>
       </button></li>
     </ul>
+  </section>
+
+  <template id="customPlaceRow">
+    <li><button class="place" type="button">
+      <span class="badge"><svg width="22" height="28" viewBox="0 0 22 28" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M11 26 C4 18 1 14 1 10 a10 10 0 0 1 20 0 c0 4-3 8-10 16z"/><circle cx="11" cy="10" r="3"/></svg></span>
+      <span class="text"><span class="name"></span><span class="addr"></span></span>
+      <svg class="chev" width="10" height="16" viewBox="0 0 10 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 2 L8 8 L2 14"/></svg>
+    </button></li>
+  </template>
+
+  <section class="view" id="placeView" aria-labelledby="placeHeading" hidden>
+    <div class="page-head">
+      <button class="round-btn" id="placeBack" aria-label="Back to Saved Locations">
+        <svg width="14" height="22" viewBox="0 0 14 22" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M11 2 L3 11 L11 20"/></svg>
+      </button>
+      <h1 id="placeHeading" tabindex="-1">Saved Location</h1>
+    </div>
+    <div class="place-details" id="placeDetails">
+      <p id="placeAddress"></p>
+      <button class="place-action primary" id="placeDirections">Directions</button>
+      <div class="place-actions">
+        <button class="place-action" id="placeEdit">Edit details</button>
+        <button class="place-action danger" id="placeDelete">Delete location</button>
+      </div>
+    </div>
+    <form class="place-details" id="placeForm" hidden>
+      <label>Name <input id="placeNameInput" required pattern=".*\S.*" maxlength="40"></label>
+      <label>Address or place <input id="placeAddressInput" required pattern=".*\S.*" maxlength="100"></label>
+      <div class="place-actions">
+        <button type="submit" class="place-action primary" id="savePlace">Save changes</button>
+        <button type="button" class="place-action" id="cancelPlaceEdit">Cancel</button>
+      </div>
+      <p id="newPlaceNote" hidden>New places use example routes on the prototype map.</p>
+    </form>
+    <div class="place-details" id="placeDeletePrompt" hidden>
+      <p id="placeDeleteMessage"></p>
+      <div class="place-actions">
+        <button class="place-action" id="cancelPlaceDelete">Cancel</button>
+        <button class="place-action danger" id="confirmPlaceDelete" aria-describedby="placeDeleteMessage">Delete location</button>
+      </div>
+    </div>
   </section>
 
   <!-- Bottom nav -->
@@ -644,9 +728,9 @@
       </span>
       <span class="cap" id="lockCap">Locked</span>
     </button>
-    <button class="nav-btn" id="sosBtn" aria-label="SOS: alert if your bike is in danger">
+    <button class="nav-btn" id="sosBtn" aria-label="Bike panic alarm (SOS)">
       <span class="circle">SOS</span>
-      <span class="cap">Alert</span>
+      <span class="cap">Panic</span>
     </button>
   </nav>
 
@@ -657,26 +741,26 @@
 
       <div id="sosConfirm">
         <h2 id="sosTitle">Bike SOS</h2>
-        <p>Away from your bike and think something's wrong? Sending an SOS will:</p>
+        <p>Activate the bike’s panic alarm. In this prototype, SOS will simulate these actions:</p>
         <ul>
           <li><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 L7 13.5 L15 4.5"/></svg>Sound the alarm on your bike</li>
           <li><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 L7 13.5 L15 4.5"/></svg>Lock it and cut motor power</li>
           <li><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 L7 13.5 L15 4.5"/></svg>Track its live location</li>
           <li><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 L7 13.5 L15 4.5"/></svg>Alert your emergency contacts</li>
         </ul>
-        <button class="btn btn-danger" id="sosSend">Send SOS</button>
+        <button class="btn btn-danger" id="sosSend">Activate alarm</button>
         <button class="btn btn-plain" data-close>Cancel</button>
       </div>
 
       <div id="sosActive" hidden>
-        <h2><span class="live"></span>SOS active</h2>
-        <p>Alarm is sounding and your bike is locked with the motor off. Your emergency contacts have been alerted.</p>
+        <h2 id="sosActiveTitle" tabindex="-1"><span class="live"></span>Panic alarm active</h2>
+        <p>Simulated alarm is sounding. The bike status shows it’s locked with the motor off.</p>
         <ul>
-          <li><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 L7 13.5 L15 4.5"/></svg>Bike last seen 0.3 mi away · just now</li>
+          <li><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 L7 13.5 L15 4.5"/></svg><span id="sosBikeLocation">Last parked location unavailable</span></li>
           <li><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 L7 13.5 L15 4.5"/></svg>Live tracking on</li>
         </ul>
         <button class="btn btn-danger" id="call911">Call 911</button>
-        <button class="btn btn-plain" id="sosStop">Stop SOS</button>
+        <button class="btn btn-plain" id="sosStop">Stop alarm</button>
         <button class="btn btn-plain" data-close>Close</button>
       </div>
     </div>
@@ -707,150 +791,504 @@ function placePins() {
     const pt = svg.createSVGPoint();
     pt.x = +el.dataset.x; pt.y = +el.dataset.y;
     const q = pt.matrixTransform(ctm);
-    el.style.left = (q.x - box.left) + 'px';
+    const inset = el.id === 'routeCallout' ? Math.min(el.offsetWidth / 2 + 8, box.width / 2) : 0;
+    el.style.left = Math.min(box.width - inset, Math.max(inset, q.x - box.left)) + 'px';
     el.style.top = (q.y - box.top) + 'px';
   });
 }
 new ResizeObserver(placePins).observe(document.getElementById('map'));
 window.addEventListener('load', placePins);
 
-// Route selection: draw the route on the map with its battery estimate
+// Saved destinations, search, and route previews
 (function () {
-  const ROUTES = {
-    safest:  { color: '#4dd0a0', battery: 74, eta: '18 min', at: 0.5 },
-    fastest: { color: '#6aa8ff', battery: 68, eta: '12 min', at: 0.7 },
-    lit:     { color: '#f5d547', battery: 71, eta: '15 min', at: 0.55 },
+  const rider = [330, 250];
+  // Each route lists the turns between the rider and the destination in SVG map coordinates.
+  const places = {
+    Social: {
+      label: 'Social', address: "Jess's place", distance: '2.1 mi', mapUsesAddress: true, point: [330, 160],
+      routes: {
+        safest:  { turns: [[290, 250], [290, 160]], minutes: 20, battery: 72, at: 0.61 },
+        fastest: { turns: [], minutes: 13, battery: 66, at: 0.54 },
+        lit:     { turns: [[380, 250], [380, 115], [330, 115]], minutes: 17, battery: 69, at: 0.53 },
+      },
+    },
+    Home: {
+      label: 'Home', address: '412 Maple St', point: [120, 160],
+      routes: {
+        safest:  { turns: [[330, 205], [170, 205], [170, 160]], minutes: 15, battery: 77, at: 0.57 },
+        fastest: { turns: [[200, 160]], minutes: 10, battery: 72, at: 0.51 },
+        lit:     { turns: [[170, 250], [170, 115], [120, 115]], minutes: 13, battery: 75, at: 0.61 },
+      },
+    },
+    Bar: {
+      label: 'Bar', address: 'Mary’s', distance: '1.4 mi', mapUsesAddress: true, point: [70, 70],
+      routes: {
+        safest:  { turns: [[330, 160], [240, 160], [240, 70]], minutes: 18, battery: 74, at: 0.5 },
+        fastest: { turns: [], minutes: 12, battery: 68, at: 0.7 },
+        lit:     { turns: [[170, 250], [170, 115], [70, 115]], minutes: 15, battery: 71, at: 0.55 },
+      },
+    },
+    Work: {
+      label: 'Work', address: '5000 Forbes Ave', point: [240, 70],
+      routes: {
+        safest:  { turns: [[330, 205], [290, 205], [290, 70]], minutes: 22, battery: 70, at: 0.54 },
+        fastest: { turns: [[240, 188]], minutes: 14, battery: 64, at: 0.63 },
+        lit:     { turns: [[170, 250], [170, 115], [240, 115]], minutes: 19, battery: 67, at: 0.56 },
+      },
+    },
   };
+  const crawlStop = {
+    label: 'The Corner Tap', address: '18 Penn Ave', point: [290, 205], searchOnly: true, keywords: 'bar pub',
+    routes: {
+      safest:  { turns: [[330, 160], [290, 160]], minutes: 14, battery: 76, at: 0.55 },
+      fastest: { turns: [[290, 250]], minutes: 8, battery: 71, at: 0.50 },
+      lit:     { turns: [[170, 250], [170, 115], [290, 115]], minutes: 12, battery: 74, at: 0.55 },
+    },
+  };
+  const storagePrefix = 'ixdf-bike.saved-place.v1.';
+  const customPrefix = 'custom-';
+
+  function makeCustomPlace({ label, address, slot }) {
+    // Place custom destinations on the streets of the prototype map.
+    const columns = [210, 260, 190, 310, 90, 140, 110, 280];
+    const streets = [115, 205, 160, 70];
+    const x = columns[slot % columns.length];
+    const y = streets[Math.floor(slot / columns.length) % streets.length];
+    const diagonalX = Math.round((y - 22) * 408 / 282);
+    const wellLitTurns = [[170, 250], [170, 115]];
+    if (y !== 115) wellLitTurns.push([120, 115], [120, y]);
+    const minutes = Math.max(6, Math.round(Math.hypot(rider[0] - x, rider[1] - y) / 20));
+    return {
+      label, address, slot, point: [x, y],
+      routes: {
+        safest:  { turns: [[290, 250], [290, y]], minutes: minutes + 6, battery: 76, at: 0.53 },
+        fastest: { turns: [[diagonalX, y]], minutes, battery: 69, at: 0.50 },
+        lit:     { turns: wellLitTurns, minutes: minutes + 3, battery: 73, at: 0.59 },
+      },
+    };
+  }
+
+  try {
+    for (const key of Object.keys(localStorage)) {
+      if (!key.startsWith(storagePrefix)) continue;
+      const id = key.slice(storagePrefix.length);
+      try {
+        const change = JSON.parse(localStorage.getItem(key));
+        const hasDetails = typeof change?.label === 'string' && typeof change.address === 'string';
+        if (id.startsWith(customPrefix)) {
+          if (hasDetails && Number.isSafeInteger(change.slot) && change.slot >= 0) {
+            places[id] = makeCustomPlace(change);
+          }
+        } else if (Object.hasOwn(places, id)) {
+          if (change === null) delete places[id];
+          else if (hasDetails) Object.assign(places[id], { label: change.label, address: change.address });
+        }
+      } catch {
+        // Skip a saved entry if it cannot be read.
+      }
+    }
+  } catch {
+    // Saved places still work for the current session if storage is unavailable.
+  }
+  let nextSlot = Math.max(-1, ...Object.values(places).map(place => place.slot ?? -1)) + 1;
+
+  function storePlaceChange(id, place) {
+    try {
+      const key = storagePrefix + id;
+      if (!place && id.startsWith(customPrefix)) localStorage.removeItem(key);
+      else localStorage.setItem(key, JSON.stringify(place
+        ? { label: place.label, address: place.address, slot: place.slot }
+        : null));
+    } catch {
+      // Keep the change in memory for the current session.
+    }
+  }
+
+  function mapName(place) {
+    return place.mapUsesAddress ? place.address : place.label;
+  }
+
   const pills = document.querySelectorAll('.route');
-  const groups = document.querySelectorAll('.route-group');
+  const group = document.getElementById('routeGroup');
+  const path = document.getElementById('routePath');
+  const routeColor = document.getElementById('routeColor');
+  const map = document.getElementById('map');
   const callout = document.getElementById('routeCallout');
   const dest = document.getElementById('destPin');
   const destLabel = document.getElementById('destLabel');
-  const search = document.getElementById('searchInput');
-  let current = null;
-
-  function show(key) {
-    current = key;
-    pills.forEach(p => {
-      const on = p.dataset.route === key;
-      p.classList.toggle('selected', on);
-      p.setAttribute('aria-pressed', String(on));
-    });
-    groups.forEach(g => g.toggleAttribute('hidden', g.dataset.route !== key)); // SVG has no .hidden property
-    dest.hidden = callout.hidden = !key;
-    if (!key) return;
-
-    const r = ROUTES[key];
-    destLabel.textContent = search.value.trim() || 'The Corner Tap';
-    // Place the callout partway along the route
-    const path = document.querySelector(`.route-group[data-route="${key}"] .casing`);
-    const pt = path.getPointAtLength(path.getTotalLength() * r.at);
-    callout.dataset.x = pt.x; callout.dataset.y = pt.y;
-    placePins();
-    callout.style.setProperty('--route', r.color);
-    const fill = (23 * r.battery / 100).toFixed(1);
-    callout.innerHTML = `<svg width="22" height="12" viewBox="0 0 34 18" fill="none"><rect x="1" y="1" width="28" height="16" rx="3.5" stroke="currentColor" stroke-width="2.4"/><rect x="30.5" y="5.5" width="2.5" height="7" rx="1" fill="currentColor"/><rect x="3.5" y="3.5" width="${fill}" height="11" rx="1.5" fill="currentColor"/></svg><span><b>${r.battery}%</b> left</span><span class="eta">· ${r.eta}</span>`;
-    callout.setAttribute('aria-label', `Estimated ${r.battery}% battery left on arrival, ${r.eta}`);
-    // restart the draw-in + pop animations
-    callout.style.animation = 'none'; callout.offsetWidth; callout.style.animation = '';
-  }
-
-  // Tap a pill to show its route; tap it again to clear
-  pills.forEach(p => p.addEventListener('click', () => show(current === p.dataset.route ? null : p.dataset.route)));
-})();
-
-// Recent searches popup (pulled from saved places)
-(function () {
   const input = document.getElementById('searchInput');
   const box = document.getElementById('recents');
-  const recents = [
-    { name: "Jess's place", sub: 'Social · 2.1 mi' },
-    { name: 'Home', sub: '412 Maple St' },
-    { name: 'The Corner Tap', sub: 'Bar · 1.4 mi' },
-    { name: 'Work', sub: '5000 Forbes Ave' },
-  ];
+  const home = document.getElementById('homeView');
+  const saved = document.getElementById('savedView');
+  const placeView = document.getElementById('placeView');
+  const placesList = document.getElementById('placesList');
+  const addPlace = document.getElementById('addPlace');
+  const customRowTemplate = document.getElementById('customPlaceRow');
+  const placeHeading = document.getElementById('placeHeading');
+  const placeAddress = document.getElementById('placeAddress');
+  const placeDetails = document.getElementById('placeDetails');
+  const placeForm = document.getElementById('placeForm');
+  const savePlace = document.getElementById('savePlace');
+  const newPlaceNote = document.getElementById('newPlaceNote');
+  const deletePrompt = document.getElementById('placeDeletePrompt');
+  const nameInput = document.getElementById('placeNameInput');
+  const addressInput = document.getElementById('placeAddressInput');
+  const editButton = document.getElementById('placeEdit');
+  const deleteButton = document.getElementById('placeDelete');
+  const confirmDelete = document.getElementById('confirmPlaceDelete');
+  const savedBtn = document.getElementById('savedBtn');
+  const homeBtn = document.getElementById('homeBtn');
+  let currentPlaceId = null;
+  let addingPlace = false;
+  let destination = null;
+  let selectedRoute = null;
+  let focusRoute = false;
+  let origin = rider;
+  let originName = 'Current location';
+  let locationShared = false;
+  let tripShared = false;
+  const riderPin = document.getElementById('riderPin');
+  const shareSwitch = document.getElementById('shareSwitch');
+  const shareTripButton = document.getElementById('shareTrip');
+  const tripCard = document.getElementById('tripCard');
+  const parkedPlace = document.getElementById('parkedPlace');
+
+  function routesFromCurrentLocation(place) {
+    if (origin === rider) return place.routes;
+    const [fromX, fromY] = origin;
+    const [toX, toY] = place.point;
+    const avenue = toX > fromX ? 240 : 170;
+    const sideStreet = toX > fromX ? 120 : 290;
+    const minutes = Math.max(5, Math.round(Math.hypot(toX - fromX, toY - fromY) / 20));
+    return {
+      safest:  { turns: [[sideStreet, fromY], [sideStreet, toY]], minutes: minutes + 5, battery: 76, at: 0.54 },
+      fastest: { turns: [[avenue, fromY], [avenue, toY]], minutes, battery: 71, at: 0.55 },
+      lit:     { turns: [[fromX, 115], [toX, 115]], minutes: minutes + 3, battery: 74, at: 0.54 },
+    };
+  }
+
+  function renderSharing(route) {
+    shareSwitch.setAttribute('aria-checked', String(locationShared));
+    map.classList.toggle('hidden-loc', !locationShared);
+    document.getElementById('shareLabel').textContent = locationShared ? 'Sharing location' : 'Location hidden';
+    const status = !locationShared ? 'Friends can’t see you' : tripShared && route
+      ? `Jess, Sam & Marcus can see your ETA to ${mapName(destination)} · ${route.minutes} min`
+      : 'Visible to Jess, Sam & Marcus';
+    document.getElementById('shareSub').textContent = status;
+    shareTripButton.textContent = tripShared ? 'Stop sharing ETA' : 'Share location & ETA';
+  }
+
+  function positionPin(pin, [x, y]) {
+    pin.dataset.x = x;
+    pin.dataset.y = y;
+  }
+
+  function renderRoute() {
+    const routes = destination && routesFromCurrentLocation(destination);
+    const route = routes?.[selectedRoute];
+    let selectedPill;
+    const noPlaces = !destination && Object.keys(places).length === 0;
+    pills.forEach(pill => {
+      const key = pill.dataset.route;
+      const on = key === selectedRoute;
+      const eta = pill.querySelector('.route-eta');
+      eta.hidden = !destination;
+      eta.textContent = routes ? `${routes[key].minutes} min` : '';
+      pill.disabled = noPlaces;
+      pill.classList.toggle('selected', on);
+      pill.setAttribute('aria-pressed', String(on));
+      if (on) selectedPill = pill;
+    });
+    positionPin(riderPin, origin);
+    dest.hidden = !destination;
+    if (destination) {
+      destLabel.textContent = mapName(destination);
+      positionPin(dest, destination.point);
+    }
+    group.toggleAttribute('hidden', !selectedPill);
+    callout.hidden = !selectedPill;
+    tripCard.hidden = !route;
+    renderSharing(route);
+    if (!selectedPill) { placePins(); return; }
+
+    const r = route;
+    document.getElementById('tripHeading').textContent = `To ${mapName(destination)}`;
+    document.getElementById('tripSummary').textContent = `From ${originName} · ${r.minutes} min estimated`;
+    const points = [origin, ...r.turns, destination.point];
+    const drawing = 'M' + points.map(point => point.join(' ')).join(' L');
+    path.setAttribute('d', drawing);
+    routeColor.setAttribute('d', drawing);
+    const color = getComputedStyle(selectedPill).getPropertyValue('--route').trim();
+    routeColor.setAttribute('stroke', color);
+    const pt = path.getPointAtLength(path.getTotalLength() * r.at);
+    positionPin(callout, [pt.x, pt.y]);
+    callout.style.setProperty('--route', color);
+    const fill = (23 * r.battery / 100).toFixed(1);
+    callout.innerHTML = `<svg width="22" height="12" viewBox="0 0 34 18" fill="none" aria-hidden="true"><rect x="1" y="1" width="28" height="16" rx="3.5" stroke="currentColor" stroke-width="2.4"/><rect x="30.5" y="5.5" width="2.5" height="7" rx="1" fill="currentColor"/><rect x="3.5" y="3.5" width="${fill}" height="11" rx="1.5" fill="currentColor"/></svg><span><b>${r.battery}%</b> battery left</span><span class="eta">· ${r.minutes} min</span>`;
+    routeColor.style.animationName = callout.style.animationName = 'none';
+    placePins();
+    routeColor.style.animationName = callout.style.animationName = '';
+    if (focusRoute) {
+      focusRoute = false;
+      selectedPill.focus({ preventScroll: true });
+    }
+  }
+
+  pills.forEach(pill => pill.addEventListener('click', () => {
+    // Keep the original map demo available before a saved destination is picked.
+    if (!destination) destination = places.Bar || Object.values(places)[0];
+    selectedRoute = selectedRoute === pill.dataset.route ? null : pill.dataset.route;
+    if (!selectedRoute) tripShared = false;
+    renderRoute();
+  }));
+
+  function selectPlace(place) {
+    if (destination !== place) tripShared = false;
+    destination = place;
+    input.value = mapName(place);
+    close();
+    selectedRoute = 'safest';
+    home.scrollTop = 0;
+    focusRoute = true;
+    if (home.hidden) navigate('');
+    else renderRoute();
+  }
+
+  shareSwitch.addEventListener('click', () => {
+    locationShared = !locationShared;
+    if (!locationShared) tripShared = false;
+    renderRoute();
+  });
+  shareTripButton.addEventListener('click', () => {
+    tripShared = !tripShared;
+    if (tripShared) locationShared = true;
+    renderRoute();
+  });
+  document.getElementById('arriveTrip').addEventListener('click', () => {
+    if (!destination || !selectedRoute) return;
+    origin = destination.point;
+    originName = mapName(destination);
+    parkedPlace.textContent = `Last parked at ${originName}`;
+    parkedPlace.hidden = false;
+    document.getElementById('sosBikeLocation').textContent = parkedPlace.textContent;
+    destination = null;
+    selectedRoute = null;
+    tripShared = false;
+    input.value = '';
+    renderRoute();
+    document.getElementById('bikeStatusHeading').focus();
+  });
+
+  // Search includes saved places and the next stop in the demo.
   const clock = '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="10" cy="10" r="8"/><path d="M10 5.5 V10 L13 12"/></svg>';
   let shown = [], active = -1;
 
+  const normalize = text => text.trim().toLowerCase().replace(/['’]/g, '');
+
   function render() {
-    const q = input.value.trim().toLowerCase();
-    shown = recents.filter(r => !q || (r.name + ' ' + r.sub).toLowerCase().includes(q));
+    const q = normalize(input.value);
+    const searchable = q ? [...Object.values(places), crawlStop] : Object.values(places);
+    shown = searchable.filter(place =>
+      normalize(`${place.label} ${place.address} ${place.distance || ''} ${place.keywords || ''}`).includes(q)
+    );
     active = Math.min(active, shown.length - 1);
-    box.innerHTML = '<div class="recents-head"><span>Recent</span></div>' + (shown.length
-      ? shown.map((r, i) => `<button class="recent${i === active ? ' active' : ''}" role="option" data-i="${i}">
-          <span class="clock">${clock}</span>
-          <span><div class="name">${r.name}</div><div class="sub"><span class="saved-tag">♥ Saved</span> · ${r.sub}</div></span>
-        </button>`).join('')
-      : '<div class="empty">No matching recent searches</div>');
+    box.innerHTML = '<div class="recents-head"><span>Recent</span></div>';
+    if (!shown.length) box.insertAdjacentHTML('beforeend', '<div class="empty">No matching recent searches</div>');
+    shown.forEach((place, index) => {
+      const option = document.createElement('button');
+      option.className = 'recent';
+      option.classList.toggle('active', index === active);
+      option.dataset.i = index;
+      option.setAttribute('role', 'option');
+      option.innerHTML = `<span class="clock">${clock}</span><span><span class="name"></span>
+        <span class="sub"><span class="saved-tag">♥ Saved</span><span class="recent-detail"></span></span></span>`;
+      option.querySelector('.name').textContent = mapName(place);
+      option.querySelector('.saved-tag').hidden = !!place.searchOnly;
+      const sub = place.mapUsesAddress ? `${place.label} · ${place.distance}` : place.address;
+      option.querySelector('.recent-detail').textContent = place.searchOnly ? sub : ` · ${sub}`;
+      box.append(option);
+    });
   }
   function open() { render(); box.hidden = false; input.setAttribute('aria-expanded', 'true'); }
   function close() { box.hidden = true; active = -1; input.setAttribute('aria-expanded', 'false'); }
-  function pick(i) { input.value = shown[i].name; close(); input.blur(); }
 
   input.addEventListener('focus', open);
   input.addEventListener('click', open);
   input.addEventListener('input', () => { active = -1; open(); });
   input.addEventListener('keydown', e => {
     if (box.hidden) return;
-    if (e.key === 'ArrowDown') { active = Math.min(active + 1, shown.length - 1); render(); e.preventDefault(); }
-    else if (e.key === 'ArrowUp') { active = Math.max(active - 1, 0); render(); e.preventDefault(); }
-    else if (e.key === 'Enter' && active >= 0) { pick(active); e.preventDefault(); }
+    if (e.key === 'ArrowDown' && shown.length) { active = Math.min(active + 1, shown.length - 1); render(); e.preventDefault(); }
+    else if (e.key === 'ArrowUp' && shown.length) { active = Math.max(active - 1, 0); render(); e.preventDefault(); }
+    else if (e.key === 'Enter' && (active >= 0 || shown.length === 1)) {
+      selectPlace(shown[Math.max(active, 0)]);
+      e.preventDefault();
+    }
     else if (e.key === 'Escape') { close(); input.blur(); }
   });
   box.addEventListener('mousedown', e => e.preventDefault()); // keep focus while tapping
-  box.addEventListener('click', e => { const b = e.target.closest('.recent'); if (b) pick(+b.dataset.i); });
+  box.addEventListener('click', e => { const b = e.target.closest('.recent'); if (b) selectPlace(shown[+b.dataset.i]); });
   document.addEventListener('click', e => { if (!e.target.closest('.topbar')) close(); });
   input.addEventListener('blur', () => setTimeout(() => { if (document.activeElement !== input) close(); }, 0));
-})();
 
-// Simple two-page navigation (#saved = Saved Locations)
-(function () {
-  const home = document.getElementById('homeView');
-  const saved = document.getElementById('savedView');
-  const savedBtn = document.getElementById('savedBtn');
-  const homeBtn = document.getElementById('homeBtn');
-  function show() {
-    const onSaved = location.hash === '#saved';
-    home.hidden = onSaved;
-    saved.hidden = !onSaved;
+  function renderSavedList() {
+    placesList.querySelectorAll('[data-custom-row]').forEach(row => row.remove());
+    for (const id of Object.keys(places)) {
+      if (!id.startsWith(customPrefix)) continue;
+      const item = customRowTemplate.content.firstElementChild.cloneNode(true);
+      item.dataset.customRow = '';
+      item.querySelector('button').dataset.place = id;
+      addPlace.closest('li').before(item);
+    }
+    placesList.querySelectorAll('.place[data-place]').forEach(row => {
+      const place = places[row.dataset.place];
+      row.closest('li').hidden = !place;
+      if (!place) return;
+      row.querySelector('.name').textContent = place.label;
+      row.querySelector('.addr').textContent = place.distance
+        ? `${place.address} · ${place.distance}`
+        : place.address;
+    });
+    document.getElementById('savedEmpty').hidden = Object.keys(places).length > 0;
+  }
+
+  function renderPlace() {
+    const place = places[currentPlaceId];
+    placeHeading.textContent = place.label;
+    placeAddress.textContent = place.address;
+    placeDetails.hidden = false;
+    placeForm.hidden = true;
+    deletePrompt.hidden = true;
+  }
+
+  function openPlaceForm(place) {
+    nameInput.value = place?.label ?? '';
+    addressInput.value = place?.address ?? '';
+    savePlace.textContent = addingPlace ? 'Save place' : 'Save changes';
+    newPlaceNote.hidden = !addingPlace;
+    placeDetails.hidden = true;
+    deletePrompt.hidden = true;
+    placeForm.hidden = false;
+    nameInput.focus({ preventScroll: true });
+  }
+
+  // Keep the saved list and each location accessible through browser Back and Forward.
+  function showView(hash) {
+    const inSaved = hash === '#saved' || hash.startsWith('#saved/');
+    const id = hash.startsWith('#saved/') ? hash.slice('#saved/'.length) : '';
+    addingPlace = id === 'add';
+    currentPlaceId = Object.hasOwn(places, id) ? id : null;
+    home.hidden = inSaved;
+    saved.hidden = !inSaved || addingPlace || !!currentPlaceId;
+    placeView.hidden = !addingPlace && !currentPlaceId;
     savedBtn.removeAttribute('aria-current');
     homeBtn.removeAttribute('aria-current');
-    (onSaved ? savedBtn : homeBtn).setAttribute('aria-current', 'page');
+    (inSaved ? savedBtn : homeBtn).setAttribute('aria-current', 'page');
     window.scrollTo(0, 0);
+    if (addingPlace) {
+      placeHeading.textContent = 'Add a place';
+      openPlaceForm();
+    } else if (currentPlaceId) {
+      renderPlace();
+      placeHeading.focus({ preventScroll: true });
+    } else if (inSaved) {
+      renderSavedList();
+      document.getElementById('savedHeading').focus({ preventScroll: true });
+    } else {
+      renderRoute();
+    }
   }
-  let cameFromHome = false;
-  function goHome() { if (cameFromHome) history.back(); else location.hash = ''; }
+
+  function navigate(hash, replace = false) {
+    if (location.hash !== hash) {
+      try {
+        if (replace) history.replaceState(null, '', hash || '#');
+        else history.pushState(null, '', hash || '#');
+      } catch {
+        location.hash = hash;
+      }
+    }
+    showView(hash);
+  }
+
   savedBtn.addEventListener('click', () => {
-    if (location.hash !== '#saved') { cameFromHome = true; location.hash = 'saved'; }
+    if (saved.hidden) navigate('#saved', home.hidden);
   });
   homeBtn.addEventListener('click', () => {
-    if (location.hash === '#saved') goHome(); else window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (!home.hidden) home.scrollTo({ top: 0, behavior: 'smooth' });
+    else navigate('', true);
   });
-  document.getElementById('backBtn').addEventListener('click', goHome);
-  // Picking a place drops it into the search bar on the home screen
-  document.querySelectorAll('.place[data-place]').forEach(btn => btn.addEventListener('click', () => {
-    document.querySelector('.search input').value = btn.dataset.place;
-    goHome();
-  }));
-  window.addEventListener('hashchange', () => { if (location.hash !== '#saved') cameFromHome = false; show(); });
-  show();
+  document.getElementById('backBtn').addEventListener('click', () => navigate('', true));
+  document.getElementById('placeBack').addEventListener('click', () => navigate('#saved', true));
+  placesList.addEventListener('click', event => {
+    const button = event.target.closest('.place');
+    if (button === addPlace) navigate('#saved/add');
+    else if (button?.dataset.place) navigate('#saved/' + button.dataset.place);
+  });
+  document.getElementById('placeDirections').addEventListener('click', () => selectPlace(places[currentPlaceId]));
+
+  editButton.addEventListener('click', () => openPlaceForm(places[currentPlaceId]));
+  document.getElementById('cancelPlaceEdit').addEventListener('click', () => {
+    if (addingPlace) {
+      navigate('#saved', true);
+      addPlace.focus({ preventScroll: true });
+    } else {
+      renderPlace();
+      editButton.focus();
+    }
+  });
+  placeForm.addEventListener('submit', event => {
+    event.preventDefault();
+    const label = nameInput.value.trim();
+    const address = addressInput.value.trim();
+    if (!label || !address) return;
+    if (addingPlace) {
+      const id = customPrefix + crypto.getRandomValues(new Uint32Array(2)).join('-');
+      places[id] = makeCustomPlace({ label, address, slot: nextSlot++ });
+      storePlaceChange(id, places[id]);
+      navigate('#saved', true);
+      placesList.querySelector(`[data-place="${id}"]`)?.focus({ preventScroll: true });
+      return;
+    }
+    const place = places[currentPlaceId];
+    const previousMapName = mapName(place);
+    Object.assign(place, { label, address });
+    storePlaceChange(currentPlaceId, place);
+    if (destination === place && input.value === previousMapName) input.value = mapName(place);
+    renderPlace();
+    placeHeading.focus();
+  });
+
+  const cancelDelete = document.getElementById('cancelPlaceDelete');
+  deleteButton.addEventListener('click', () => {
+    document.getElementById('placeDeleteMessage').textContent =
+      `Delete “${places[currentPlaceId].label}” from Saved Locations?`;
+    placeDetails.hidden = true;
+    deletePrompt.hidden = false;
+    cancelDelete.focus();
+  });
+  cancelDelete.addEventListener('click', () => {
+    renderPlace();
+    deleteButton.focus();
+  });
+  confirmDelete.addEventListener('click', () => {
+    const place = places[currentPlaceId];
+    if (!place) return;
+    if (destination === place) {
+      if (input.value === mapName(place)) input.value = '';
+      destination = null;
+      selectedRoute = null;
+      tripShared = false;
+    }
+    delete places[currentPlaceId];
+    storePlaceChange(currentPlaceId, null);
+    navigate('#saved', true);
+  });
+  window.addEventListener('hashchange', () => showView(location.hash));
+  showView(location.hash);
 })();
 
-// Location sharing switch on the map
+// Friend popups on the map
 (function () {
-  const map = document.getElementById('map');
-  const sw = document.getElementById('shareSwitch');
-  const label = document.getElementById('shareLabel');
-  let on = true;
-  function set(v) {
-    on = v;
-    sw.setAttribute('aria-checked', String(on));
-    map.classList.toggle('hidden-loc', !on);
-    label.firstChild.textContent = on ? 'Sharing location' : 'Location hidden';
-    document.getElementById('shareSub').textContent = on ? 'Visible to 3 friends' : 'Friends can\'t see you';
-  }
-  sw.addEventListener('click', () => set(!on));
-
   // Friend popups: tap to expand, tap elsewhere to close
   const friends = document.querySelectorAll('.friend');
   friends.forEach(f => f.addEventListener('click', e => {
@@ -869,6 +1307,9 @@ const bikeState = { power: true, locked: true, sos: false };
   const lockBtn = document.getElementById('lockBtn');
   const sosBtn = document.getElementById('sosBtn');
   const sheet = document.getElementById('sosSheet');
+  const dialog = sheet.querySelector('[role="dialog"]');
+  const sosSend = document.getElementById('sosSend');
+  const activeTitle = document.getElementById('sosActiveTitle');
   const CLOSED = 'M8 17 V11 a9 9 0 0 1 18 0 V17';
   const OPEN = 'M8 17 V8 a9 9 0 0 1 18 0 V5';   // shackle swung up and open
 
@@ -885,19 +1326,28 @@ const bikeState = { power: true, locked: true, sos: false };
     sosBtn.classList.toggle('active', bikeState.sos);
     document.getElementById('sosConfirm').hidden = bikeState.sos;
     document.getElementById('sosActive').hidden = !bikeState.sos;
+    dialog.setAttribute('aria-labelledby', bikeState.sos ? 'sosActiveTitle' : 'sosTitle');
   }
 
   powerBtn.addEventListener('click', () => { bikeState.power = !bikeState.power; render(); });
   lockBtn.addEventListener('click', () => { bikeState.locked = !bikeState.locked; render(); });
 
-  const openSheet = () => { sheet.hidden = false; };
-  const closeSheet = () => { sheet.hidden = true; };
+  function openSheet() {
+    sheet.hidden = false;
+    (bikeState.sos ? activeTitle : sosSend).focus();
+  }
+  function closeSheet() {
+    if (sheet.hidden) return;
+    sheet.hidden = true;
+    sosBtn.focus();
+  }
   sosBtn.addEventListener('click', openSheet);
   sheet.addEventListener('click', e => { if (e.target === sheet || e.target.closest('[data-close]')) closeSheet(); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet(); });
-  document.getElementById('sosSend').addEventListener('click', () => {
+  sosSend.addEventListener('click', () => {
     Object.assign(bikeState, { sos: true, locked: true, power: false });
     render();
+    activeTitle.focus();
   });
   // Prototype only: no real call is placed
   let toastTimer;
