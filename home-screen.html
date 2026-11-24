@@ -57,11 +57,11 @@
   }
   .search input::placeholder { color: var(--muted); }
   .search input {
-    flex: 1; border: none; background: transparent;
+    flex: 1; min-width: 0; border: none; background: transparent;
     font-size: 17px; outline: none; color: var(--ink);
   }
 
-  /* ---------- Top bar: search + profile ---------- */
+  /* ---------- Top bar ---------- */
   .topbar { display: flex; align-items: center; gap: 10px; position: relative; z-index: 10; }
 
   /* ---------- Recent searches popup ---------- */
@@ -161,17 +161,37 @@
   .trip-card { gap: 8px; }
   .trip-card p, .bike-status-head p { font-size: 13px; color: var(--muted); }
   .trip-card .place-actions { margin-top: 4px; }
+  .trip-card .bike-route-status { color: var(--ok); }
+  .bike-route-status:empty { position: absolute; }
   .bike-status-head { display: grid; gap: 4px; }
 
   /* ---------- Map (teammate) ---------- */
   .map {
-    flex: 1 0 200px; min-height: 200px;  /* fill available height while keeping the map readable */
+    display: flex; flex-direction: column; flex: 1 0 auto;
     border-radius: 10px;
     overflow: hidden;
     background: var(--map-bg);
+  }
+  .map-toolbar { display: flex; justify-content: flex-end; padding: 4px 8px; }
+  .map-toggle {
+    display: grid; place-items: center;
+    width: 44px; height: 44px; border: 0; border-radius: 10px;
+    background: var(--pill); color: var(--ink);
+    cursor: pointer;
+  }
+  .map-toggle .minimize-icon,
+  .map-toggle[aria-expanded="true"] .expand-icon { display: none; }
+  .map-toggle[aria-expanded="true"] .minimize-icon { display: block; }
+  .map-canvas {
+    flex: 1 0 200px; min-height: 200px;
+    overflow: hidden;
     position: relative;
   }
-  .map > svg { width: 100%; height: 100%; display: block; }
+  .map.is-expanded .map-canvas {
+    flex-basis: clamp(320px, 62vh, 560px);
+    flex-basis: clamp(320px, 62dvh, 560px);
+  }
+  .map-canvas > svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 
   /* ---------- Routes drawn on the map ---------- */
   .route-line { fill: none; stroke-linecap: round; stroke-linejoin: round; }
@@ -210,6 +230,7 @@
   .pin {
     position: absolute; transform: translate(-50%, -50%);
     display: flex; flex-direction: column; align-items: center;
+    width: max-content; max-width: calc(100% - 16px);
   }
   .me-dot {
     position: relative; width: 14px; height: 14px; border-radius: 50%;
@@ -227,7 +248,7 @@
   }
   .friend .bubble {
     background: #fff; color: #111;
-    font-size: 11px; font-weight: 600; white-space: nowrap;
+    font-size: 11px; font-weight: 600; text-align: center; max-width: 100%;
     padding: 3px 8px; border-radius: 10px;
     margin-bottom: 4px; position: relative;
     box-shadow: 0 2px 6px rgba(0,0,0,.4);
@@ -248,7 +269,7 @@
 
   /* ---------- Location sharing bar ---------- */
   .share-bar {
-    position: absolute; left: 8px; right: 8px; bottom: 8px; z-index: 3;
+    margin: 4px 8px 8px;
     display: flex; align-items: center; gap: 10px;
     padding: 8px 10px 8px 12px;
     background: rgba(20,20,23,.88);
@@ -257,7 +278,7 @@
   }
   .share-bar .status-dot { flex: none; width: 9px; height: 9px; border-radius: 50%; background: #4dd0a0; }
   .map.hidden-loc .share-bar .status-dot { background: #6b6b72; }
-  .share-bar .label { flex: 1; min-width: 0; font-size: 14px; font-weight: 500; line-height: 1.2; }
+  .share-bar .label { flex: 1; min-width: 0; font-size: 14px; font-weight: 500; line-height: 1.2; overflow-wrap: anywhere; }
   .share-bar .sub { display: block; font-size: 12px; font-weight: 400; color: var(--muted); }
   .switch {
     flex: none; width: 46px; height: 28px; border-radius: 14px;
@@ -294,40 +315,47 @@
 
   /* ---------- 3D bike model (mine) ---------- */
   .bike-area {
-    display: flex; align-items: center; gap: 8px;
-    height: 172px; flex: none;
+    display: grid; gap: 8px;
+    flex: none;
   }
   .bike-stage {
-    flex: 1; min-width: 0; height: 100%;
+    width: 100%; min-width: 0; height: clamp(164px, 46vw, 198px);
     position: relative;
     touch-action: pan-y;          /* vertical swipes scroll the page, horizontal swipes turn the bike */
     -webkit-user-select: none; user-select: none;
   }
   .bike-stage canvas { display: block; width: 100% !important; height: 100% !important; }
-  .bike-fallback { display: none; width: 100%; margin-top: 30px; }
+  .bike-fallback { display: none; width: 100%; height: 100%; }
   .no-webgl .bike-fallback { display: block; }
 
-  /* ---------- Bike stats column ---------- */
+  /* ---------- Bike status above the model ---------- */
   .bike-stats {
-    flex: none; width: 118px;
-    display: flex; flex-direction: column; gap: 6px;
+    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px;
   }
-  .stat { padding-left: 4px; }
-  .stat dt { font-size: 11px; color: var(--muted); line-height: 1.2; letter-spacing: .02em; }
+  .stat {
+    min-width: 0; padding: 8px; border-radius: 10px;
+    background: var(--pill);
+  }
+  .stat dt {
+    display: flex; align-items: center; gap: 4px; min-height: 15px;
+    font-size: 12px; color: var(--muted); line-height: 1.2;
+  }
   .stat dd {
-    display: flex; align-items: center; gap: 7px;
-    font-size: 17px; font-weight: 600; line-height: 1.2; margin-top: 2px;
+    font-size: 16px; font-weight: 600; line-height: 1.2; margin-top: 4px;
   }
-  .stat dd svg { flex: none; display: block; transform: scale(.85); transform-origin: left center; }
-  #powerStat.on dd svg { color: var(--ok); }
+  .stat dt svg { flex: none; display: block; color: var(--ink); }
+  #powerStat.on dt svg { color: var(--ok); }
   #powerStat:not(.on) dd { color: var(--muted); }
-  #lockStat.unlocked dd svg { color: var(--warn); }
-  .stat .unit { font-size: 12px; font-weight: 500; margin-left: -4px; }
+  #lockStat.unlocked dt svg { color: var(--warn); }
+  .stat .unit { font-size: 12px; font-weight: 500; margin-left: 3px; }
+  @media (max-width: 359px) {
+    .bike-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
 
-  /* ---------- Bottom nav ---------- */
+  /* ---------- Bottom bike controls ---------- */
   .controls {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     justify-items: center;
     margin-top: auto;
     padding-top: 2px;
@@ -345,8 +373,6 @@
   }
   .nav-btn .cap { font-size: 12px; color: var(--muted); line-height: 1; }
   .nav-btn:active .circle, .round-btn:active { background: var(--pill-active); }
-  .nav-btn[aria-current="page"] .circle { background: var(--ink); color: var(--surface); }
-  .nav-btn[aria-current="page"] .cap { color: var(--ink); }
 
   /* Power: green when on, dim when off */
   #powerBtn[aria-pressed="true"] .circle { color: var(--ok); box-shadow: inset 0 0 0 2px var(--ok); }
@@ -383,6 +409,19 @@
   }
   .toast small { display: block; color: var(--muted); font-size: 12px; }
   @keyframes drop { from { transform: translate(-50%, -20px); opacity: 0; } }
+
+  /* ---------- Route confirmation ---------- */
+  .route-confirmation {
+    position: fixed; inset: 0; height: fit-content;
+    width: min(360px, calc(100% - 32px)); margin: auto; padding: 20px;
+    border: 1px solid var(--pill-active); border-radius: 16px;
+    background: var(--surface); color: var(--ink);
+    box-shadow: 0 8px 24px rgba(0,0,0,.5);
+  }
+  .route-confirmation::backdrop { background: rgba(0,0,0,.6); }
+  .route-confirmation h2 { font-size: 20px; }
+  .route-confirmation p { margin: 8px 0 16px; color: var(--muted); overflow-wrap: anywhere; }
+  .route-confirmation button { width: 100%; }
 
   /* ---------- SOS sheet ---------- */
   .sheet-backdrop {
@@ -421,7 +460,7 @@
 
   <section class="view" id="homeView">
 
-  <!-- Search bar + profile -->
+  <!-- Search, saved locations, and profile -->
   <div class="topbar">
     <label class="search">
       <svg width="30" height="30" viewBox="0 0 38 38" fill="none" stroke="currentColor" stroke-width="2.4">
@@ -433,6 +472,11 @@
              autocomplete="off" role="combobox" aria-expanded="false" aria-controls="recents">
     </label>
     <div class="recents" id="recents" role="listbox" aria-label="Recent searches" hidden></div>
+    <button class="round-btn" id="savedBtn" type="button" aria-label="Saved locations">
+      <svg width="26" height="24" viewBox="0 0 38 34" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linejoin="round" aria-hidden="true">
+        <path d="M19 31 C8 23 2 17 2 10.5 A8.5 8.5 0 0 1 19 7 A8.5 8.5 0 0 1 36 10.5 C36 17 30 23 19 31 Z"/>
+      </svg>
+    </button>
     <button class="round-btn" aria-label="Profile">
       <svg width="30" height="30" viewBox="0 0 30 30" fill="none" stroke="currentColor" stroke-width="2.2">
         <circle cx="15" cy="10" r="6"/>
@@ -458,7 +502,14 @@
   </section>
 
   <!-- GPS map placeholder -->
-  <div class="map hidden-loc" id="map" aria-label="Map">
+  <section class="map hidden-loc" id="map" aria-label="Map">
+    <div class="map-toolbar">
+      <button class="map-toggle" id="mapToggle" type="button" aria-label="Expand map" aria-expanded="false" aria-controls="mapCanvas">
+        <svg class="expand-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5m11 11v5h-5"/></svg>
+        <svg class="minimize-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h5V4m11 11h-5v5"/></svg>
+      </button>
+    </div>
+    <div class="map-canvas" id="mapCanvas">
     <svg id="mapSvg" viewBox="0 0 408 380" preserveAspectRatio="xMidYMid meet" style="overflow: visible">
       <!-- water -->
       <path d="M230 -60 C250 -20 270 0 300 30 C340 50 380 45 700 20" stroke="#0a0a0b" stroke-width="26" fill="none"/>
@@ -505,6 +556,7 @@
 
     <!-- You -->
     <div class="pin" id="riderPin" aria-hidden="true"><span class="me-dot"></span></div>
+    </div>
 
   <!-- Location sharing on/off -->
     <div class="share-bar" role="group" aria-label="Location sharing">
@@ -512,15 +564,17 @@
       <span class="label"><span id="shareLabel">Location hidden</span><span class="sub" id="shareSub" role="status">Friends can’t see you</span></span>
       <button class="switch" id="shareSwitch" role="switch" aria-checked="false" aria-label="Share my location"></button>
     </div>
-  </div>
+  </section>
 
   <section class="place-details trip-card" id="tripCard" aria-labelledby="tripHeading" hidden>
     <h2 id="tripHeading"></h2>
     <p id="tripSummary"></p>
+    <button type="button" class="place-action primary" id="sendRoute">Send to bike</button>
     <div class="place-actions">
-      <button class="place-action primary" id="shareTrip">Share location &amp; ETA</button>
+      <button class="place-action" id="shareTrip">Share location &amp; ETA</button>
       <button class="place-action" id="arriveTrip">I’ve arrived</button>
     </div>
+    <p class="bike-route-status" id="bikeRouteStatus" role="status"></p>
   </section>
 
   <!-- Bike stats + 3D bike model (swipe to rotate) -->
@@ -531,38 +585,38 @@
   <div class="bike-area">
     <dl class="bike-stats" aria-label="Bike status">
       <div class="stat">
-        <dt>Battery</dt>
-        <dd>
-          82%
-          <svg width="26" height="14" viewBox="0 0 34 18" fill="none" aria-hidden="true">
+        <dt>
+          <svg width="19" height="12" viewBox="0 0 34 18" fill="none" aria-hidden="true">
             <rect x="1" y="1" width="28" height="16" rx="3.5" stroke="currentColor" stroke-width="2"/>
             <rect x="30.5" y="5.5" width="2.5" height="7" rx="1" fill="currentColor"/>
             <rect x="3.5" y="3.5" width="19" height="11" rx="1.5" fill="currentColor"/>
           </svg>
-        </dd>
+          Battery
+        </dt>
+        <dd>82%</dd>
       </div>
       <div class="stat">
         <dt>Miles left</dt>
         <dd>31<span class="unit">mi</span></dd>
       </div>
       <div class="stat" id="powerStat">
-        <dt>Power</dt>
-        <dd>
-          <span id="powerText">On</span>
+        <dt>
           <svg width="15" height="15" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" aria-hidden="true">
             <path d="M12 9 A14 14 0 1 0 28 9"/><path d="M20 3 V19"/>
           </svg>
-        </dd>
+          Power
+        </dt>
+        <dd id="powerText">On</dd>
       </div>
       <div class="stat" id="lockStat">
-        <dt>Lock</dt>
-        <dd id="lockStatus">
-          <span id="lockText">Locked</span>
+        <dt>
           <svg width="14" height="17" viewBox="0 0 34 40" fill="none" stroke="currentColor" stroke-width="4" aria-hidden="true">
             <rect x="3" y="17" width="28" height="21" rx="3"/>
             <path class="shackle" d="M8 17 V11 a9 9 0 0 1 18 0 V17"/>
           </svg>
-        </dd>
+          Lock
+        </dt>
+        <dd id="lockStatus"><span id="lockText">Locked</span></dd>
       </div>
     </dl>
 
@@ -692,24 +746,8 @@
     </div>
   </section>
 
-  <!-- Bottom nav -->
-  <nav class="controls">
-    <button class="nav-btn" id="homeBtn">
-      <span class="circle">
-        <svg width="34" height="30" viewBox="0 0 46 38" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round">
-          <path d="M3 19 L23 2 L43 19"/><path d="M8 15 V36 H38 V15"/><path d="M18 36 V24 H28 V36"/>
-        </svg>
-      </span>
-      <span class="cap">Home</span>
-    </button>
-    <button class="nav-btn" id="savedBtn">
-      <span class="circle">
-        <svg width="32" height="29" viewBox="0 0 38 34" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linejoin="round">
-          <path d="M19 31 C8 23 2 17 2 10.5 A8.5 8.5 0 0 1 19 7 A8.5 8.5 0 0 1 36 10.5 C36 17 30 23 19 31 Z"/>
-        </svg>
-      </span>
-      <span class="cap">Saved</span>
-    </button>
+  <!-- Bottom bike controls -->
+  <div class="controls" role="group" aria-label="Bike controls">
     <button class="nav-btn" id="powerBtn" aria-pressed="true" aria-label="Bike power">
       <span class="circle">
         <svg width="32" height="32" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round">
@@ -732,7 +770,15 @@
       <span class="circle">SOS</span>
       <span class="cap">Panic</span>
     </button>
-  </nav>
+  </div>
+
+  <dialog class="route-confirmation" id="routeConfirmation" aria-labelledby="routeConfirmationTitle" aria-describedby="routeConfirmationMessage">
+    <h2 id="routeConfirmationTitle">Route sent</h2>
+    <p id="routeConfirmationMessage"></p>
+    <form method="dialog">
+      <button type="submit" class="place-action primary" autofocus>Done</button>
+    </form>
+  </dialog>
 
   <!-- SOS sheet -->
   <div class="sheet-backdrop" id="sosSheet" hidden>
@@ -781,22 +827,37 @@
 <script>
 // Map pins live in SVG coordinates (data-x / data-y) and are placed on screen here,
 // so they stay on their streets whatever size the map ends up on a given phone.
+const mapPanel = document.getElementById('map');
+const mapCanvas = document.getElementById('mapCanvas');
+const mapSvg = document.getElementById('mapSvg');
+const mapToggle = document.getElementById('mapToggle');
+
 function placePins() {
-  const map = document.getElementById('map');
-  const svg = document.getElementById('mapSvg');
-  const ctm = svg.getScreenCTM();
-  const box = map.getBoundingClientRect();
-  if (!ctm || !box.width) return;
-  map.querySelectorAll('[data-x]').forEach(el => {
-    const pt = svg.createSVGPoint();
+  const ctm = mapSvg.getScreenCTM();
+  const box = mapCanvas.getBoundingClientRect();
+  if (!ctm || !box.width || !box.height) return;
+  mapCanvas.querySelectorAll('[data-x]').forEach(el => {
+    if (el.hidden) return;
+    const pt = mapSvg.createSVGPoint();
     pt.x = +el.dataset.x; pt.y = +el.dataset.y;
-    const q = pt.matrixTransform(ctm);
-    const inset = el.id === 'routeCallout' ? Math.min(el.offsetWidth / 2 + 8, box.width / 2) : 0;
-    el.style.left = Math.min(box.width - inset, Math.max(inset, q.x - box.left)) + 'px';
-    el.style.top = (q.y - box.top) + 'px';
+    const point = pt.matrixTransform(ctm);
+    const sideInset = Math.min(el.offsetWidth / 2 + 8, box.width / 2);
+    // The destination pin's tip sits at the coordinate, above-center for its label.
+    const isDestination = el.classList.contains('dest-pin');
+    const topInset = (isDestination ? el.offsetHeight : el.offsetHeight / 2) + 8;
+    const bottomInset = (isDestination ? 0 : el.offsetHeight / 2) + 8;
+    el.style.left = Math.min(box.width - sideInset, Math.max(sideInset, point.x - box.left)) + 'px';
+    el.style.top = Math.min(box.height - bottomInset, Math.max(topInset, point.y - box.top)) + 'px';
   });
 }
-new ResizeObserver(placePins).observe(document.getElementById('map'));
+
+mapToggle.addEventListener('click', () => {
+  const expanded = mapPanel.classList.toggle('is-expanded');
+  mapToggle.setAttribute('aria-expanded', String(expanded));
+  mapToggle.setAttribute('aria-label', expanded ? 'Minimize map' : 'Expand map');
+  placePins();
+});
+new ResizeObserver(placePins).observe(mapCanvas);
 window.addEventListener('load', placePins);
 
 // Saved destinations, search, and route previews
@@ -909,6 +970,9 @@ window.addEventListener('load', placePins);
   }
 
   const pills = document.querySelectorAll('.route');
+  const routeLabels = Object.fromEntries(Array.from(pills, pill => [
+    pill.dataset.route, pill.querySelector('.top').textContent.trim(),
+  ]));
   const group = document.getElementById('routeGroup');
   const path = document.getElementById('routePath');
   const routeColor = document.getElementById('routeColor');
@@ -937,7 +1001,6 @@ window.addEventListener('load', placePins);
   const deleteButton = document.getElementById('placeDelete');
   const confirmDelete = document.getElementById('confirmPlaceDelete');
   const savedBtn = document.getElementById('savedBtn');
-  const homeBtn = document.getElementById('homeBtn');
   let currentPlaceId = null;
   let addingPlace = false;
   let destination = null;
@@ -947,10 +1010,14 @@ window.addEventListener('load', placePins);
   let originName = 'Current location';
   let locationShared = false;
   let tripShared = false;
+  let sentDirections = null;
   const riderPin = document.getElementById('riderPin');
   const shareSwitch = document.getElementById('shareSwitch');
   const shareTripButton = document.getElementById('shareTrip');
   const tripCard = document.getElementById('tripCard');
+  const sendRouteButton = document.getElementById('sendRoute');
+  const bikeRouteStatus = document.getElementById('bikeRouteStatus');
+  const routeConfirmation = document.getElementById('routeConfirmation');
   const parkedPlace = document.getElementById('parkedPlace');
 
   function routesFromCurrentLocation(place) {
@@ -983,6 +1050,36 @@ window.addEventListener('load', placePins);
     pin.dataset.y = y;
   }
 
+  function sentRouteMessage() {
+    return sentDirections
+      ? `${sentDirections.route} route to ${sentDirections.destination} sent to bike display.`
+      : '';
+  }
+
+  function renderBikeHandoff(drawing) {
+    const previewWasSent = sentDirections &&
+      sentDirections.destination === mapName(destination) &&
+      sentDirections.route === routeLabels[selectedRoute] &&
+      sentDirections.path === drawing;
+    sendRouteButton.textContent = previewWasSent ? 'Resend to bike' : 'Send to bike';
+    const status = sentRouteMessage();
+    if (bikeRouteStatus.textContent !== status) bikeRouteStatus.textContent = status;
+  }
+
+  sendRouteButton.addEventListener('click', () => {
+    if (!destination || !selectedRoute || routeConfirmation.open) return;
+    // Keep a snapshot of what the simulated bike display received.
+    const drawing = path.getAttribute('d');
+    sentDirections = {
+      destination: mapName(destination),
+      route: routeLabels[selectedRoute],
+      path: drawing,
+    };
+    document.getElementById('routeConfirmationMessage').textContent = sentRouteMessage();
+    routeConfirmation.showModal();
+  });
+  routeConfirmation.addEventListener('close', () => renderBikeHandoff(path.getAttribute('d')));
+
   function renderRoute() {
     const routes = destination && routesFromCurrentLocation(destination);
     const route = routes?.[selectedRoute];
@@ -1013,11 +1110,13 @@ window.addEventListener('load', placePins);
 
     const r = route;
     document.getElementById('tripHeading').textContent = `To ${mapName(destination)}`;
-    document.getElementById('tripSummary').textContent = `From ${originName} · ${r.minutes} min estimated`;
+    document.getElementById('tripSummary').textContent =
+      `${routeLabels[selectedRoute]} · ${r.minutes} min estimated · From ${originName}`;
     const points = [origin, ...r.turns, destination.point];
     const drawing = 'M' + points.map(point => point.join(' ')).join(' L');
     path.setAttribute('d', drawing);
     routeColor.setAttribute('d', drawing);
+    renderBikeHandoff(drawing);
     const color = getComputedStyle(selectedPill).getPropertyValue('--route').trim();
     routeColor.setAttribute('stroke', color);
     const pt = path.getPointAtLength(path.getTotalLength() * r.at);
@@ -1073,6 +1172,7 @@ window.addEventListener('load', placePins);
     document.getElementById('sosBikeLocation').textContent = parkedPlace.textContent;
     destination = null;
     selectedRoute = null;
+    sentDirections = null;
     tripShared = false;
     input.value = '';
     renderRoute();
@@ -1180,9 +1280,6 @@ window.addEventListener('load', placePins);
     home.hidden = inSaved;
     saved.hidden = !inSaved || addingPlace || !!currentPlaceId;
     placeView.hidden = !addingPlace && !currentPlaceId;
-    savedBtn.removeAttribute('aria-current');
-    homeBtn.removeAttribute('aria-current');
-    (inSaved ? savedBtn : homeBtn).setAttribute('aria-current', 'page');
     window.scrollTo(0, 0);
     if (addingPlace) {
       placeHeading.textContent = 'Add a place';
@@ -1211,13 +1308,13 @@ window.addEventListener('load', placePins);
   }
 
   savedBtn.addEventListener('click', () => {
-    if (saved.hidden) navigate('#saved', home.hidden);
+    close();
+    navigate('#saved');
   });
-  homeBtn.addEventListener('click', () => {
-    if (!home.hidden) home.scrollTo({ top: 0, behavior: 'smooth' });
-    else navigate('', true);
+  document.getElementById('backBtn').addEventListener('click', () => {
+    navigate('', true);
+    savedBtn.focus({ preventScroll: true });
   });
-  document.getElementById('backBtn').addEventListener('click', () => navigate('', true));
   document.getElementById('placeBack').addEventListener('click', () => navigate('#saved', true));
   placesList.addEventListener('click', event => {
     const button = event.target.closest('.place');
@@ -1296,8 +1393,14 @@ window.addEventListener('load', placePins);
     const wasOpen = f.classList.contains('open');
     friends.forEach(x => x.classList.remove('open'));
     if (!wasOpen) f.classList.add('open');
+    placePins();
   }));
-  document.addEventListener('click', () => friends.forEach(x => x.classList.remove('open')));
+  document.addEventListener('click', () => {
+    const openFriend = document.querySelector('.friend.open');
+    if (!openFriend) return;
+    openFriend.classList.remove('open');
+    placePins();
+  });
 })();
 
 // Bike state: power, lock, SOS
